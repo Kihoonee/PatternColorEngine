@@ -53,11 +53,11 @@
         };
 
         const initialPatterns = [
-            { type: 'wave', name: 'Wave Preset', params: { waveCount: 3, frequency: 1.5, amplitude: 30.0, curvature: 0.5, opacity: 0.15, yOffset: -0.1 } },
-            { type: 'circle', name: 'Circle Preset', params: { count: 30, minRadius: 4.0, maxRadius: 18.0, opacity: 0.25, gridWeights: [1, 1, 1, 1, 1, 1, 1, 1, 1], flowScale: { dir: 'B_T', range: [0.3, 2.5] } } },
-            { type: 'rectangle', name: 'Rect Preset', params: { count: 40, minSize: 8.0, maxSize: 25.0, opacity: 0.2, cornerRadius: 4.0, gridWeights: [1, 1, 1, 1, 0, 1, 1, 1, 1], flowScale: { dir: 'C_OUT', range: [0.5, 1.5] } } },
-            { type: 'star', name: 'Star Preset', params: { count: 50, points: 5, minSize: 10.0, maxSize: 30.0, opacity: 0.35, gridWeights: [10, 0, 0, 0, 5, 0, 0, 0, 1], flowScale: { dir: 'TL_BR', range: [2.5, 0.3] } } },
-            { type: 'mixed', name: 'Mixed Preset', params: { shape: 'heart', count: 35, minSize: 15.0, maxSize: 45.0, opacity: 0.25, gridWeights: [1, 1, 1, 1, 0, 1, 1, 1, 1], flowScale: { dir: 'C_OUT', range: [0.6, 1.4] } } },
+            { type: 'wave', name: 'Wave Preset', params: { waveCount: 3, frequency: 1.5, amplitude: 30.0, curvature: 0.5, blur: 0, opacity: 0.15, yOffset: -0.1 } },
+            { type: 'circle', name: 'Circle Preset', params: { count: 30, minRadius: 4.0, maxRadius: 18.0, blur: 8, opacity: 0.25, gridWeights: [1, 1, 1, 1, 1, 1, 1, 1, 1], flowScale: { dir: 'B_T', range: [0.3, 2.5] } } },
+            { type: 'rectangle', name: 'Rect Preset', params: { count: 40, minSize: 8.0, maxSize: 25.0, blur: 0, opacity: 0.2, cornerRadius: 4.0, gridWeights: [1, 1, 1, 1, 0, 1, 1, 1, 1], flowScale: { dir: 'C_OUT', range: [0.5, 1.5] } } },
+            { type: 'star', name: 'Star Preset', params: { count: 50, points: 5, minSize: 10.0, maxSize: 30.0, blur: 0, opacity: 0.35, gridWeights: [10, 0, 0, 0, 5, 0, 0, 0, 1], flowScale: { dir: 'TL_BR', range: [2.5, 0.3] } } },
+            { type: 'mixed', name: 'Mixed Preset', params: { shape: 'heart', count: 35, minSize: 15.0, maxSize: 45.0, blur: 0, opacity: 0.25, gridWeights: [1, 1, 1, 1, 0, 1, 1, 1, 1], flowScale: { dir: 'C_OUT', range: [0.6, 1.4] } } },
         ];
 
         // -----------------------------------------------------------------------------
@@ -128,6 +128,108 @@
             return { x: dx, y: dy, scaleMultiplier };
         };
 
+        // -----------------------------------------------------------------------------
+        // --- 패턴 그리기 렌더러 (Flutter 이식을 위해 독립적인 함수들로 모듈화) ---
+        // -----------------------------------------------------------------------------
+        const PatternRenderer = {
+            drawWave: (ctx, width, height, params, drawColor) => {
+                const waveCount = params.waveCount || 3;
+                const amplitude = params.amplitude || 10;
+                const frequency = params.frequency || 1;
+                const curvature = params.curvature || 0;
+                const yOffset = params.yOffset || 0;
+                
+                for (let i = 0; i < waveCount; i++) {
+                    ctx.beginPath();
+                    const baseY = height * (0.3 + i * 0.15 + yOffset);
+                    ctx.moveTo(0, baseY);
+
+                    for (let x = 0; x <= width + 5; x += 5) {
+                        const nx = x / width;
+                        const distortedNx = nx + (curvature * 0.3) * Math.sin(nx * Math.PI * 2);
+                        const y = baseY + Math.sin(distortedNx * Math.PI * 2 * frequency) * amplitude;
+                        ctx.lineTo(x, y);
+                    }
+                    ctx.lineTo(width, height); 
+                    ctx.lineTo(0, height);
+                    
+                    const g = ctx.createLinearGradient(0, 0, 0, height); 
+                    g.addColorStop(0, drawColor(0)); 
+                    g.addColorStop(1, drawColor(params.opacity || 0.2));
+                    ctx.fillStyle = g; 
+                    ctx.fill();
+                }
+            },
+            drawCircle: (ctx, width, height, params, drawColor, random) => {
+                const count = params.count || 10;
+                const minRadius = params.minRadius || 5;
+                const maxRadius = params.maxRadius || 20;
+                if (params.concentric) {
+                    for (let i = 0; i < count; i++) {
+                        const r = minRadius + (maxRadius - minRadius) * (i / count);
+                        ctx.beginPath(); ctx.arc(width/2, height/2 + (height * (params.yStart || 0) / 2), r, 0, Math.PI*2);
+                        ctx.fillStyle = drawColor((params.opacity || 0.2) * (1 - i/count)); ctx.fill();
+                    }
+                } else {
+                    for (let i = 0; i < count; i++) {
+                        const {x, y, scaleMultiplier} = generateTransform(random, width, height, params);
+                        const r = (minRadius + random() * (maxRadius - minRadius)) * scaleMultiplier;
+                        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+                        ctx.fillStyle = drawColor(params.opacity || 0.2); ctx.fill();
+                    }
+                }
+            },
+            drawRectangle: (ctx, width, height, params, drawColor, random) => {
+                const count = params.count || 10;
+                const minSize = params.minSize || 10;
+                const maxSize = params.maxSize || 20;
+                for (let i = 0; i < count; i++) {
+                    const {x, y, scaleMultiplier} = generateTransform(random, width, height, params);
+                    const s = (minSize + random() * (maxSize - minSize)) * scaleMultiplier;
+                    ctx.save(); ctx.translate(x, y); ctx.rotate(random() * Math.PI * 2); ctx.fillStyle = drawColor(params.opacity || 0.2);
+                    if (params.cornerRadius > 0) { ctx.beginPath(); ctx.roundRect(-s/2, -s/2, s, s, params.cornerRadius * scaleMultiplier); ctx.fill(); }
+                    else { ctx.fillRect(-s/2, -s/2, s, s); } ctx.restore();
+                }
+            },
+            drawStar: (ctx, width, height, params, drawColor, random) => {
+                const count = params.count || 10;
+                const minSize = params.minSize || 10;
+                const maxSize = params.maxSize || 20;
+                const points = params.points || 5;
+                for (let i = 0; i < count; i++) {
+                    const {x, y, scaleMultiplier} = generateTransform(random, width, height, params);
+                    const s = (minSize + random() * (maxSize - minSize)) * scaleMultiplier;
+                    ctx.save(); ctx.translate(x, y); ctx.rotate(random() * Math.PI * 2); ctx.fillStyle = drawColor(params.opacity || 0.2);
+                    ctx.beginPath(); ctx.moveTo(0, -s);
+                    for (let j = 0; j < points * 2; j++) {
+                        const r = j % 2 === 0 ? s : s * 0.4; const a = (j * Math.PI / points) - Math.PI/2;
+                        ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
+                    }
+                    ctx.closePath(); ctx.fill(); ctx.restore();
+                }
+            },
+            drawMixed: (ctx, width, height, params, drawColor, random) => {
+                const count = params.count || 10;
+                const minSize = params.minSize || 10;
+                const maxSize = params.maxSize || 20;
+                const shape = params.shape || 'circle';
+                for (let i = 0; i < count; i++) {
+                    const {x, y, scaleMultiplier} = generateTransform(random, width, height, params);
+                    const s = (minSize + random() * (maxSize - minSize)) * scaleMultiplier;
+                    ctx.save(); ctx.translate(x, y); ctx.rotate(random() * Math.PI * 2); ctx.fillStyle = drawColor(params.opacity || 0.2);
+                    ctx.beginPath();
+                    if (shape === 'heart') { ctx.moveTo(0, s/4); ctx.bezierCurveTo(-s, -s/2, -s/4, -s, 0, -s/4); ctx.bezierCurveTo(s/4, -s, s, -s/2, 0, s/4); }
+                    else if (shape === 'cloud') { ctx.arc(-s/3, 0, s/3, 0, Math.PI*2); ctx.arc(s/3, 0, s/3, 0, Math.PI*2); ctx.arc(0, -s/4, s/2.5, 0, Math.PI*2); }
+                    else if (shape === 'triangle') { ctx.moveTo(0, -s/2); ctx.lineTo(s/2, s/2); ctx.lineTo(-s/2, s/2); }
+                    else if (shape === 'hexagon') { for (let j = 0; j < 6; j++) { const a = j * Math.PI / 3; ctx.lineTo(s/2 * Math.cos(a), s/2 * Math.sin(a)); } }
+                    else if (shape === 'diamond') { ctx.moveTo(0, -s/2); ctx.lineTo(s/2, 0); ctx.lineTo(0, s/2); ctx.lineTo(-s/2, 0); }
+                    else if (shape === 'cross' || shape === 'plus') { const t = s * 0.2; ctx.rect(-t/2, -s/2, t, s); ctx.rect(-s/2, -t/2, s, t); }
+                    else { ctx.arc(0,0,s/2,0,Math.PI*2); }
+                    ctx.fill(); ctx.restore();
+                }
+            }
+        };
+
         const Icon = ({ name, size = 18, color = 'currentColor', className = '' }) => {
             const spanRef = useRef(null);
             useEffect(() => {
@@ -147,6 +249,7 @@
             switch (key) {
                 case 'count': return { min: 1, max: 2000, step: 1 };
                 case 'waveCount': return { min: 1, max: 20, step: 1 };
+                case 'blur': return { min: 0, max: 50, step: 0.5 };
                 case 'frequency': return { min: 0.1, max: 10, step: 0.1 };
                 case 'points': return { min: 3, max: 20, step: 1 };
                 case 'amplitude': return { min: 0, max: 300, step: 1 };
@@ -179,97 +282,20 @@
                 let seed = 123;
                 const random = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
                 
-                if (type === 'wave') {
-                    const waveCount = params.waveCount || 3;
-                    const amplitude = params.amplitude || 10;
-                    const frequency = params.frequency || 1;
-                    const curvature = params.curvature || 0;
-                    const yOffset = params.yOffset || 0;
-                    
-                    for (let i = 0; i < waveCount; i++) {
-                        ctx.beginPath();
-                        const baseY = height * (0.3 + i * 0.15 + yOffset);
-                        ctx.moveTo(0, baseY);
+                // 수채화 물감 번짐 효과 (Canvas 필터 적용)
+                ctx.filter = `blur(${params.blur || 0}px)`;
 
-                        for (let x = 0; x <= width + 5; x += 5) {
-                            const nx = x / width;
-                            const distortedNx = nx + (curvature * 0.3) * Math.sin(nx * Math.PI * 2);
-                            const y = baseY + Math.sin(distortedNx * Math.PI * 2 * frequency) * amplitude;
-                            ctx.lineTo(x, y);
-                        }
-                        ctx.lineTo(width, height); 
-                        ctx.lineTo(0, height);
-                        
-                        const g = ctx.createLinearGradient(0, 0, 0, height); 
-                        g.addColorStop(0, drawColor(0)); 
-                        g.addColorStop(1, drawColor(params.opacity || 0.2));
-                        ctx.fillStyle = g; 
-                        ctx.fill();
-                    }
+                // 분리된 PatternRenderer를 호출하여 그리기 실행
+                if (type === 'wave') {
+                    PatternRenderer.drawWave(ctx, width, height, params, drawColor);
                 } else if (type === 'circle') {
-                    const count = params.count || 10;
-                    const minRadius = params.minRadius || 5;
-                    const maxRadius = params.maxRadius || 20;
-                    if (params.concentric) {
-                        for (let i = 0; i < count; i++) {
-                            const r = minRadius + (maxRadius - minRadius) * (i / count);
-                            ctx.beginPath(); ctx.arc(width/2, height/2 + (height * (params.yStart || 0) / 2), r, 0, Math.PI*2);
-                            ctx.fillStyle = drawColor((params.opacity || 0.2) * (1 - i/count)); ctx.fill();
-                        }
-                    } else {
-                        for (let i = 0; i < count; i++) {
-                            const {x, y, scaleMultiplier} = generateTransform(random, width, height, params);
-                            const r = (minRadius + random() * (maxRadius - minRadius)) * scaleMultiplier;
-                            ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
-                            ctx.fillStyle = drawColor(params.opacity || 0.2); ctx.fill();
-                        }
-                    }
+                    PatternRenderer.drawCircle(ctx, width, height, params, drawColor, random);
                 } else if (type === 'rectangle') {
-                    const count = params.count || 10;
-                    const minSize = params.minSize || 10;
-                    const maxSize = params.maxSize || 20;
-                    for (let i = 0; i < count; i++) {
-                        const {x, y, scaleMultiplier} = generateTransform(random, width, height, params);
-                        const s = (minSize + random() * (maxSize - minSize)) * scaleMultiplier;
-                        ctx.save(); ctx.translate(x, y); ctx.rotate(random() * Math.PI * 2); ctx.fillStyle = drawColor(params.opacity || 0.2);
-                        if (params.cornerRadius > 0) { ctx.beginPath(); ctx.roundRect(-s/2, -s/2, s, s, params.cornerRadius * scaleMultiplier); ctx.fill(); }
-                        else { ctx.fillRect(-s/2, -s/2, s, s); } ctx.restore();
-                    }
+                    PatternRenderer.drawRectangle(ctx, width, height, params, drawColor, random);
                 } else if (type === 'star') {
-                    const count = params.count || 10;
-                    const minSize = params.minSize || 10;
-                    const maxSize = params.maxSize || 20;
-                    const points = params.points || 5;
-                    for (let i = 0; i < count; i++) {
-                        const {x, y, scaleMultiplier} = generateTransform(random, width, height, params);
-                        const s = (minSize + random() * (maxSize - minSize)) * scaleMultiplier;
-                        ctx.save(); ctx.translate(x, y); ctx.rotate(random() * Math.PI * 2); ctx.fillStyle = drawColor(params.opacity || 0.2);
-                        ctx.beginPath(); ctx.moveTo(0, -s);
-                        for (let j = 0; j < points * 2; j++) {
-                            const r = j % 2 === 0 ? s : s * 0.4; const a = (j * Math.PI / points) - Math.PI/2;
-                            ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
-                        }
-                        ctx.closePath(); ctx.fill(); ctx.restore();
-                    }
+                    PatternRenderer.drawStar(ctx, width, height, params, drawColor, random);
                 } else if (type === 'mixed') {
-                    const count = params.count || 10;
-                    const minSize = params.minSize || 10;
-                    const maxSize = params.maxSize || 20;
-                    const shape = params.shape || 'circle';
-                    for (let i = 0; i < count; i++) {
-                        const {x, y, scaleMultiplier} = generateTransform(random, width, height, params);
-                        const s = (minSize + random() * (maxSize - minSize)) * scaleMultiplier;
-                        ctx.save(); ctx.translate(x, y); ctx.rotate(random() * Math.PI * 2); ctx.fillStyle = drawColor(params.opacity || 0.2);
-                        ctx.beginPath();
-                        if (shape === 'heart') { ctx.moveTo(0, s/4); ctx.bezierCurveTo(-s, -s/2, -s/4, -s, 0, -s/4); ctx.bezierCurveTo(s/4, -s, s, -s/2, 0, s/4); }
-                        else if (shape === 'cloud') { ctx.arc(-s/3, 0, s/3, 0, Math.PI*2); ctx.arc(s/3, 0, s/3, 0, Math.PI*2); ctx.arc(0, -s/4, s/2.5, 0, Math.PI*2); }
-                        else if (shape === 'triangle') { ctx.moveTo(0, -s/2); ctx.lineTo(s/2, s/2); ctx.lineTo(-s/2, s/2); }
-                        else if (shape === 'hexagon') { for (let j = 0; j < 6; j++) { const a = j * Math.PI / 3; ctx.lineTo(s/2 * Math.cos(a), s/2 * Math.sin(a)); } }
-                        else if (shape === 'diamond') { ctx.moveTo(0, -s/2); ctx.lineTo(s/2, 0); ctx.lineTo(0, s/2); ctx.lineTo(-s/2, 0); }
-                        else if (shape === 'cross' || shape === 'plus') { const t = s * 0.2; ctx.rect(-t/2, -s/2, t, s); ctx.rect(-s/2, -t/2, s, t); }
-                        else { ctx.arc(0,0,s/2,0,Math.PI*2); }
-                        ctx.fill(); ctx.restore();
-                    }
+                    PatternRenderer.drawMixed(ctx, width, height, params, drawColor, random);
                 }
             }, [theme, pattern, engineRule, width, height]);
             return <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} className="block" />;
@@ -322,6 +348,7 @@
                 shape: "도형 모양",
                 count: "개수",
                 waveCount: "물결 개수",
+                blur: "물감 번짐 (블러)",
                 frequency: "진동수 (파동 횟수)",
                 points: "꼭짓점 개수",
                 amplitude: "진폭 (높이)",
