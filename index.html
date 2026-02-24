@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Style Canvas - Pattern Generator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & Babel for JSX -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect, useRef } = React;
+        // Manual Lucide Component wrapper for HTML/CDN usage
+        const Icon = ({ name, ...props }) => {
+            const iconRef = useRef(null);
+            useEffect(() => {
+                if (iconRef.current) {
+                    const LucideIcon = lucide.icons[name];
+                    if (LucideIcon) {
+                        const svg = lucide.createIcons({
+                            icons: { [name]: LucideIcon },
+                            attrs: { 
+                                width: props.size || 24, 
+                                height: props.size || 24, 
+                                class: props.className || '',
+                                stroke: props.color || 'currentColor'
+                            }
+                        });
+                    }
+                }
+            }, [name, props]);
+            return <i ref={iconRef} data-lucide={name}></i>;
+        };
+
+        // --- Logic: generateTransform ---
+        const generateTransform = (random, width, height, params) => {
+            let weights = params.gridWeights;
+            if (!Array.isArray(weights) || weights.length !== 9) {
+                weights = [1, 1, 1, 1, 1, 1, 1, 1, 1];
+            }
+            const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+            let pick = random() * (totalWeight || 1);
+            let zoneIndex = 0;
+            for (let i = 0; i < 9; i++) {
+                pick -= weights[i];
+                if (pick <= 0) { zoneIndex = i; break; }
+            }
+            const zoneX = zoneIndex % 3;
+            const zoneY = Math.floor(zoneIndex / 3);
+            const zoneWidth = width / 3.0;
+            const zoneHeight = height / 3.0;
+            const dx = (zoneX * zoneWidth) + (random() * zoneWidth);
+            const dy = (zoneY * zoneHeight) + (random() * zoneHeight);
+
+            let scaleMultiplier = 1.0;
+            if (params.flowScale) {
+                const dir = params.flowScale.dir || 'NONE';
+                const range = params.flowScale.range || [1.0, 1.0];
+                const startScale = parseFloat(range[0]);
+                const endScale = parseFloat(range[1]);
+                let progress = 0.0;
+                switch (dir) {
+                    case 'TL_BR': progress = ((dx / width) + (dy / height)) / 2.0; break;
+                    case 'TR_BL': progress = ((1.0 - (dx / width)) + (dy / height)) / 2.0; break;
+                    case 'T_B':   progress = dy / height; break;
+                    case 'B_T':   progress = 1.0 - (dy / height); break;
+                    case 'L_R':   progress = dx / width; break;
+                    case 'R_L':   progress = 1.0 - (dx / width); break;
+                    case 'C_OUT':
+                        const cx = (dx / width) - 0.5;
+                        const cy = (dy / height) - 0.5;
+                        progress = Math.min(1.0, Math.sqrt(cx * cx + cy * cy) * 1.414);
+                        break;
+                }
+                progress = Math.max(0.0, Math.min(1.0, progress));
+                scaleMultiplier = startScale + (endScale - startScale) * progress;
+            }
+            return { x: dx, y: dy, scaleMultiplier };
+        };
+
+        // --- Logic: calculateOverlayColor ---
+        const calculateOverlayColor = (hex) => {
+            if (!hex) return { type: 'rgba', r: 255, g: 255, b: 255, a: 0.15, rule: 'Default', condition: 'N/A', hsl: 'N/A', luma: 1 };
+            let cleanHex = hex.replace('#', '');
+            let r = parseInt(cleanHex.slice(0, 2), 16) / 255;
+            let g = parseInt(cleanHex.slice(2, 4), 16) / 255;
+            let b = parseInt(cleanHex.slice(4, 6), 16) / 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h = 0, s = 0, l = (max + min) / 2;
+            if (max !== min) {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+            const hslString = `H:${Math.round(h*360)} S:${Math.round(s*100)} L:${Math.round(l*100)} Y:${Math.round(luma*100)}`;
+            if (luma < 0.25) {
+                const dynamicAlpha = 0.12 + (0.25 - luma) * 0.3; 
+                return { type: 'rgba', r: 255, g: 255, b: 255, a: dynamicAlpha, rule: 'Midnight Glow', condition: 'Luma < 0.25', hsl: hslString, luma };
+            } else if (luma < 0.6) {
+                const alpha = s > 0.5 ? 0.40 : 0.25;
+                return { type: 'rgba', r: 255, g: 255, b: 255, a: alpha, rule: s > 0.5 ? 'Neon Pop' : 'Muted Elegance', condition: 'Mid-Luma', hsl: hslString, luma };
+            } else if (luma < 0.85) {
+                let newL = Math.min(1.0, l * 2.0); 
+                let newS = s * 0.5;
+                let dynamicAlpha = 0.35 + (luma - 0.6) * 0.2; 
+                return { type: 'hsla', h: h * 360, s: newS * 100, l: newL * 100, a: dynamicAlpha, rule: 'Pigment Tint', condition: 'High Luma', hsl: hslString, luma };
+            } else {
+                let newL = Math.max(0.2, l - 0.45); 
+                let newS = s === 0 ? 0 : Math.min(1.0, s + 0.3); 
+                let finalH = h * 360;
+                if (s > 0.05 && finalH >= 40 && finalH <= 75) finalH = Math.max(0, finalH - 18);
+                return { type: 'hsla', h: finalH, s: newS * 100, l: newL * 100, a: 0.15, rule: 'Deep Tone-on-Tone', condition: 'Ultra Light', hsl: hslString, luma };
+            }
+        };
+
+        const initialPatterns = [
+            { type: 'wave', name: 'Wave Theme 1', params: { waveCount: 3, amplitude: 10.0, curvature: 0.1, opacity: 0.15, yOffset: -0.1 } },
+            { type: 'wave', name: 'Wave Theme 6', params: { waveCount: 5, amplitude: 27.5, curvature: 0.35, opacity: 0.25, yOffset: 0.0 } },
+            { type: 'circle', name: 'Rising Bubbles 1', params: { count: 20, minRadius: 4.0, maxRadius: 18.0, opacity: 0.25, gridWeights: [0, 0, 0, 1, 1, 1, 5, 5, 5], flowScale: { dir: 'B_T', range: [0.3, 2.5] } } },
+            { type: 'circle', name: 'Concentric Splash 2', params: { count: 7, minRadius: 15.0, maxRadius: 130.0, opacity: 0.15, concentric: true, yStart: 0.1 } },
+            { type: 'rectangle', name: 'Confetti Border 1', params: { count: 30, minSize: 8.0, maxSize: 25.0, opacity: 0.2, cornerRadius: 4.0, gridWeights: [1, 1, 1, 1, 0, 1, 1, 1, 1], flowScale: { dir: 'C_OUT', range: [0.5, 1.5] } } },
+            { type: 'star', name: 'Milky Way 1', params: { count: 30, points: 5, minSize: 10.0, maxSize: 30.0, opacity: 0.35, gridWeights: [10, 0, 0, 0, 5, 0, 0, 0, 1], flowScale: { dir: 'TL_BR', range: [2.5, 0.3] } } },
+            { type: 'mixed', name: 'Deco Heart 1', params: { shape: 'heart', count: 25, minSize: 15.0, maxSize: 45.0, opacity: 0.25, gridWeights: [1, 1, 1, 1, 0, 1, 1, 1, 1], flowScale: { dir: 'C_OUT', range: [0.6, 1.4] } } },
+        ];
+
+        const PatternCanvas = ({ theme, pattern, engineRule, width, height }) => {
+            const canvasRef = useRef(null);
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const dpr = window.devicePixelRatio || 1;
+                canvas.width = width * dpr; canvas.height = height * dpr;
+                ctx.scale(dpr, dpr); ctx.clearRect(0, 0, width, height);
+                const { type, params } = pattern;
+                const baseOpacity = params.opacity || 0.25;
+                const drawColor = (elementOpacity) => {
+                    const safeBaseOpacity = baseOpacity === 0 ? 0.01 : baseOpacity;
+                    const finalAlpha = engineRule.a * (elementOpacity / safeBaseOpacity);
+                    return engineRule.type === 'rgba' ? `rgba(${engineRule.r}, ${engineRule.g}, ${engineRule.b}, ${finalAlpha})` : `hsla(${engineRule.h}, ${engineRule.s}%, ${engineRule.l}%, ${finalAlpha})`;
+                };
+                let seed = 123;
+                const random = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+                if (type === 'wave') {
+                    const { waveCount = 3, amplitude = 10, opacity = 0.2, yOffset = 0, curvature = 0.1 } = params;
+                    for (let i = 0; i < waveCount; i++) {
+                        ctx.beginPath();
+                        const startY = height * (0.3 + i * 0.15 + yOffset); ctx.moveTo(0, startY);
+                        const cp1x = width * (0.25 + (i * curvature)); const cp1y = height * (0.2 + i * 0.1 + yOffset) - amplitude;
+                        const cp2x = width * (0.65 - (i * curvature)); const cp2y = height * (0.5 + i * 0.1 + yOffset) + amplitude;
+                        const endY = height * (0.4 + i * 0.15 + yOffset);
+                        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, width, endY); ctx.lineTo(width, height); ctx.lineTo(0, height);
+                        const g = ctx.createLinearGradient(0, 0, 0, height); g.addColorStop(0, drawColor(0)); g.addColorStop(1, drawColor(opacity));
+                        ctx.fillStyle = g; ctx.fill();
+                    }
+                } else if (type === 'circle') {
+                    const { count = 10, minRadius = 5, maxRadius = 20, opacity = 0.2, concentric = false, yStart = 0 } = params;
+                    if (concentric) {
+                        for (let i = 0; i < count; i++) {
+                            const r = minRadius + (maxRadius - minRadius) * (i / count);
+                            ctx.beginPath(); ctx.arc(width/2, height/2 + (height * yStart / 2), r, 0, Math.PI*2);
+                            ctx.fillStyle = drawColor(opacity * (1 - i/count)); ctx.fill();
+                        }
+                    } else {
+                        for (let i = 0; i < count; i++) {
+                            const {x, y, scaleMultiplier} = generateTransform(random, width, height, params);
+                            const r = (minRadius + random() * (maxRadius - minRadius)) * scaleMultiplier;
+                            ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fillStyle = drawColor(opacity); ctx.fill();
+                        }
+                    }
+                } else if (type === 'rectangle') {
+                    const { count = 10, minSize = 5, maxSize = 20, opacity = 0.2, cornerRadius = 0 } = params;
+                    for (let i = 0; i < count; i++) {
+                        const {x, y, scaleMultiplier} = generateTransform(random, width, height, params);
+                        const size = (minSize + random() * (maxSize - minSize)) * scaleMultiplier;
+                        ctx.save(); ctx.translate(x, y); ctx.rotate(random() * Math.PI * 2); ctx.fillStyle = drawColor(opacity);
+                        if (cornerRadius > 0) { ctx.beginPath(); ctx.roundRect(-size/2, -size/2, size, size, cornerRadius * scaleMultiplier); ctx.fill(); }
+                        else { ctx.fillRect(-size/2, -size/2, size, size); } ctx.restore();
+                    }
+                } else if (type === 'star') {
+                    const { count = 10, points = 5, minSize = 5, maxSize = 20, opacity = 0.2 } = params;
+                    for (let i = 0; i < count; i++) {
+                        const {x, y, scaleMultiplier} = generateTransform(random, width, height, params);
+                        const s = (minSize + random() * (maxSize - minSize)) * scaleMultiplier;
+                        ctx.save(); ctx.translate(x, y); ctx.rotate(random() * Math.PI * 2); ctx.fillStyle = drawColor(opacity);
+                        ctx.beginPath(); ctx.moveTo(0, -s);
+                        for (let j = 0; j < points * 2; j++) {
+                            const r = j % 2 === 0 ? s : s * 0.4; const a = (j * Math.PI / points) - Math.PI / 2;
+                            ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
+                        }
+                        ctx.closePath(); ctx.fill(); ctx.restore();
+                    }
+                } else if (type === 'mixed') {
+                    const { shape = 'circle', count = 10, minSize = 5, maxSize = 20, opacity = 0.2 } = params;
+                    for (let i = 0; i < count; i++) {
+                        const {x, y, scaleMultiplier} = generateTransform(random, width, height, params);
+                        const s = (minSize + random() * (maxSize - minSize)) * scaleMultiplier;
+                        ctx.save(); ctx.translate(x, y); ctx.rotate(random() * Math.PI * 2); ctx.fillStyle = drawColor(opacity);
+                        ctx.beginPath();
+                        if (shape === 'heart') { ctx.moveTo(0, s/4); ctx.bezierCurveTo(-s, -s/2, -s/4, -s, 0, -s/4); ctx.bezierCurveTo(s/4, -s, s, -s/2, 0, s/4); }
+                        else if (shape === 'cloud') { ctx.arc(-s/3, 0, s/3, 0, Math.PI*2); ctx.arc(s/3, 0, s/3, 0, Math.PI*2); ctx.arc(0, -s/4, s/2.5, 0, Math.PI*2); }
+                        else { ctx.arc(0, 0, s/2, 0, Math.PI*2); }
+                        ctx.fill(); ctx.restore();
+                    }
+                }
+            }, [theme, pattern, engineRule, width, height]);
+            return <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} className="block rounded-[32px]" />;
+        };
+
+        const App = () => {
+            const [patterns, setPatterns] = useState(initialPatterns);
+            const [selectedTheme, setSelectedTheme] = useState({ color: "#FFE8E8", text: "#333333", category: "warmPastels", name: "Soft Pink" });
+            const [selectedPatternBase, setSelectedPatternBase] = useState(patterns[0]);
+            const [patternParams, setPatternParams] = useState(patterns[0].params);
+            const [copyStatus, setCopyStatus] = useState(null);
+
+            const colors = {
+                warmPastels: ["#FFE8E8", "#FFCDD2", "#F8B9CE", "#CE93D8", "#FFCC80", "#FFAB91"],
+                coolPastels: ["#E3F2FD", "#90CAF9", "#81D4FA", "#80DEEA", "#9FA8DA", "#B39DDB"],
+                vividPastels: ["#CCFF90", "#76FF03", "#00E5FF", "#F50057", "#D500F9", "#FFEA00"],
+                warmTones: ["#FBC02D", "#FFA000", "#F57C00", "#E64A19", "#795548", "#D84315"],
+                earthyTones: ["#388E3C", "#689F38", "#AFB42B", "#00796B", "#558B2F", "#4E342E"],
+                neutralTones: ["#455A64", "#616161", "#5D4037", "#FFFFFF", "#000000", "#8D6E63"]
+            };
+
+            const allThemes = useMemo(() => {
+                const list = [];
+                Object.entries(colors).forEach(([catId, hexCodes]) => {
+                    hexCodes.forEach(hex => {
+                        list.push({ color: hex, text: calculateOverlayColor(hex).luma > 0.6 ? "#333333" : "#FFFFFF", category: catId, name: `Theme ${hex}` });
+                    });
+                });
+                return list;
+            }, []);
+
+            useEffect(() => { setPatternParams(selectedPatternBase.params); }, [selectedPatternBase]);
+
+            const handleParamChange = (key, value) => { setPatternParams(prev => ({ ...prev, [key]: value })); };
+            const handleSavePattern = () => {
+                const updated = patterns.map(p => p.name === selectedPatternBase.name ? { ...p, params: JSON.parse(JSON.stringify(patternParams)), isCustomized: true } : p);
+                setPatterns(updated); setSelectedPatternBase(prev => ({ ...prev, params: JSON.parse(JSON.stringify(patternParams)), isCustomized: true }));
+            };
+
+            const formatValueForCopy = (v) => {
+                if (typeof v === 'number' && !Number.isInteger(v)) return v.toFixed(2);
+                if (typeof v === 'string') return `'${v}'`;
+                if (Array.isArray(v)) return `[${v.join(', ')}]`;
+                if (typeof v === 'object' && v !== null) return `{ ${Object.entries(v).map(([k, val]) => `'${k}': ${formatValueForCopy(val)}`).join(', ')} }`;
+                return v;
+            };
+
+            const copyToClipboard = (params, patternName) => {
+                const formatted = Object.entries(params).map(([k, v]) => `      '${k}': ${formatValueForCopy(v)},`).join('\n');
+                const text = `params: {\n${formatted}\n    }`;
+                const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+                document.execCommand('copy'); setCopyStatus(patternName); setTimeout(() => setCopyStatus(null), 1500);
+                document.body.removeChild(ta);
+            };
+
+            const engineRule = useMemo(() => calculateOverlayColor(selectedTheme?.color || "#FFFFFF"), [selectedTheme]);
+
+            return (
+                <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row h-screen overflow-hidden text-gray-800">
+                    <div className="w-full lg:w-[70%] flex flex-col h-full border-r border-gray-100 bg-white shadow-inner" style={{ backgroundColor: selectedTheme.color + '08' }}>
+                        <div className="w-full px-8 pt-8 pb-6 flex-shrink-0 z-10 border-b border-gray-100 bg-white/40 backdrop-blur-md">
+                            <header className="mb-6 flex justify-between items-center">
+                                <div>
+                                    <h1 className="text-3xl font-black mb-1 text-gray-900 tracking-tight">Style Canvas</h1>
+                                    <p className="text-xs text-gray-500 uppercase tracking-widest">DEPLOY READY v4.0</p>
+                                </div>
+                            </header>
+                            <div className="flex flex-col xl:flex-row gap-6">
+                                <div className="flex-1 max-w-[550px]">
+                                    <div className="w-full shadow-2xl rounded-[32px] overflow-hidden relative border border-white/40" style={{ aspectRatio: '360/185', backgroundColor: selectedTheme.color }}>
+                                        <div className="absolute inset-0">
+                                            <PatternCanvas theme={selectedTheme} pattern={{ type: selectedPatternBase.type, params: patternParams }} engineRule={engineRule} width={600} height={600 * (185/360)} />
+                                        </div>
+                                        <div className="relative z-10 p-8 h-full flex flex-col justify-between pointer-events-none">
+                                            <h2 className="text-2xl font-bold" style={{ color: selectedTheme.text }}>{selectedTheme.name}</h2>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 grid grid-cols-2 gap-3 text-[11px] font-bold">
+                                        <div className="bg-white/90 p-3 rounded-xl border flex gap-2 items-center"><Icon name="Cpu" size={14} color="#3b82f6" /> {engineRule.rule}</div>
+                                        <div className="bg-white/90 p-3 rounded-xl border flex gap-2 items-center"><Icon name="Palette" size={14} color="#10b981" /> Alpha {Math.round(engineRule.a * 100)}%</div>
+                                    </div>
+                                </div>
+                                <div className="w-full xl:w-[380px] bg-white p-5 rounded-3xl border shadow-xl flex flex-col max-h-[350px]">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="text-xs font-black uppercase">Editor</h3>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => copyToClipboard(patternParams, 'EDITOR')} className="text-[10px] px-2 py-1 bg-gray-100 rounded-lg">{copyStatus === 'EDITOR' ? 'Copied!' : 'Copy'}</button>
+                                            <button onClick={handleSavePattern} className="text-[10px] px-2 py-1 bg-blue-500 text-white rounded-lg">Save</button>
+                                        </div>
+                                    </div>
+                                    <div className="overflow-y-auto pr-2 custom-scrollbar">
+                                        {Object.entries(patternParams).map(([key, value]) => (
+                                            <div key={key} className="py-1">
+                                                <div className="flex justify-between text-[10px] font-bold mb-1">
+                                                    <span>{key}</span>
+                                                    <span className="text-blue-600">{typeof value === 'number' ? value.toFixed(2) : String(value)}</span>
+                                                </div>
+                                                {typeof value === 'number' ? (
+                                                    <input type="range" min="0" max={key === 'count' ? 2000 : (key === 'amplitude' ? 200 : 1)} step="0.01" value={value} onChange={(e) => handleParamChange(key, parseFloat(e.target.value))} className="w-full h-1 accent-blue-500" />
+                                                ) : <div className="text-[9px] bg-gray-50 p-1 rounded italic">{JSON.stringify(value)}</div>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="w-full px-8 py-8 flex-1 overflow-y-auto bg-gray-50/30">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-24">
+                                {patterns.map((pat, idx) => (
+                                    <div key={idx} onClick={() => setSelectedPatternBase(pat)} className={`p-5 rounded-[32px] border cursor-pointer transition-all ${selectedPatternBase.name === pat.name ? 'border-blue-500 bg-white ring-4 ring-blue-50 shadow-xl' : 'bg-white/80'}`}>
+                                        <div className="flex justify-between items-center mb-3">
+                                            <span className="text-sm font-bold">{pat.name}</span>
+                                            <button onClick={(e) => { e.stopPropagation(); copyToClipboard(pat.params, pat.name); }} className="p-1.5 bg-gray-100 rounded-lg"><Icon name="Copy" size={14} /></button>
+                                        </div>
+                                        <div className="text-[10px] font-mono bg-gray-50 p-3 rounded-xl overflow-x-auto">
+                                            params: {'{'}{Object.entries(pat.params).map(([k,v]) => `\n  '${k}': ${formatValueForCopy(v)},`)}\n{'}'}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="w-full lg:w-[30%] bg-white overflow-y-auto p-8 border-l pb-32">
+                        <h2 className="text-xl font-black mb-6">Theme Collection</h2>
+                        <div className="grid grid-cols-5 gap-2">
+                            {allThemes.map((t, idx) => (
+                                <button key={idx} onClick={() => setSelectedTheme(t)} className={`aspect-square rounded-lg transition-all ${selectedTheme.color === t.color ? 'ring-2 ring-blue-500 scale-110 z-10 shadow-lg' : 'border border-gray-100'}`} style={{ backgroundColor: t.color }}>
+                                    {selectedTheme.color === t.color && <Icon name="Check" size={12} color={t.text} className="mx-auto" />}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
