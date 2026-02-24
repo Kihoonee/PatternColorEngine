@@ -13,88 +13,56 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow: hidden; background-color: #f8fafc; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: #e2e8f0; border-radius: 10px; }
+        input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: #3b82f6; cursor: pointer; -webkit-appearance: none; margin-top: -5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     </style>
 </head>
-<body class="bg-gray-50">
+<body class="text-gray-900">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useMemo, useEffect, useRef } = React;
-        // Manual Lucide Component wrapper for HTML/CDN usage
-        const Icon = ({ name, ...props }) => {
-            const iconRef = useRef(null);
-            useEffect(() => {
-                if (iconRef.current) {
-                    const LucideIcon = lucide.icons[name];
-                    if (LucideIcon) {
-                        const svg = lucide.createIcons({
-                            icons: { [name]: LucideIcon },
-                            attrs: { 
-                                width: props.size || 24, 
-                                height: props.size || 24, 
-                                class: props.className || '',
-                                stroke: props.color || 'currentColor'
-                            }
-                        });
-                    }
-                }
-            }, [name, props]);
-            return <i ref={iconRef} data-lucide={name}></i>;
+
+        // -----------------------------------------------------------------------------
+        // 1. Data Definitions
+        // -----------------------------------------------------------------------------
+        const CATEGORIES_DATA = {
+            warmPastels: { label: "Warm Pastels", icon: "Sun", color: "text-rose-400" },
+            coolPastels: { label: "Cool Pastels", icon: "Cloud", color: "text-blue-400" },
+            vividPastels: { label: "Vivid & Neon", icon: "Zap", color: "text-amber-400" },
+            warmTones: { label: "Warm Tones", icon: "Palette", color: "text-orange-500" },
+            earthyTones: { label: "Earthy Tones", icon: "Leaf", color: "text-green-600" },
+            neutralTones: { label: "Neutrals", icon: "Layers", color: "text-gray-500" },
         };
 
-        // --- Logic: generateTransform ---
-        const generateTransform = (random, width, height, params) => {
-            let weights = params.gridWeights;
-            if (!Array.isArray(weights) || weights.length !== 9) {
-                weights = [1, 1, 1, 1, 1, 1, 1, 1, 1];
-            }
-            const totalWeight = weights.reduce((sum, w) => sum + w, 0);
-            let pick = random() * (totalWeight || 1);
-            let zoneIndex = 0;
-            for (let i = 0; i < 9; i++) {
-                pick -= weights[i];
-                if (pick <= 0) { zoneIndex = i; break; }
-            }
-            const zoneX = zoneIndex % 3;
-            const zoneY = Math.floor(zoneIndex / 3);
-            const zoneWidth = width / 3.0;
-            const zoneHeight = height / 3.0;
-            const dx = (zoneX * zoneWidth) + (random() * zoneWidth);
-            const dy = (zoneY * zoneHeight) + (random() * zoneHeight);
-
-            let scaleMultiplier = 1.0;
-            if (params.flowScale) {
-                const dir = params.flowScale.dir || 'NONE';
-                const range = params.flowScale.range || [1.0, 1.0];
-                const startScale = parseFloat(range[0]);
-                const endScale = parseFloat(range[1]);
-                let progress = 0.0;
-                switch (dir) {
-                    case 'TL_BR': progress = ((dx / width) + (dy / height)) / 2.0; break;
-                    case 'TR_BL': progress = ((1.0 - (dx / width)) + (dy / height)) / 2.0; break;
-                    case 'T_B':   progress = dy / height; break;
-                    case 'B_T':   progress = 1.0 - (dy / height); break;
-                    case 'L_R':   progress = dx / width; break;
-                    case 'R_L':   progress = 1.0 - (dx / width); break;
-                    case 'C_OUT':
-                        const cx = (dx / width) - 0.5;
-                        const cy = (dy / height) - 0.5;
-                        progress = Math.min(1.0, Math.sqrt(cx * cx + cy * cy) * 1.414);
-                        break;
-                }
-                progress = Math.max(0.0, Math.min(1.0, progress));
-                scaleMultiplier = startScale + (endScale - startScale) * progress;
-            }
-            return { x: dx, y: dy, scaleMultiplier };
+        const THEME_COLORS_FULL = {
+            warmPastels: ["#FFE8E8", "#FFE1E2", "#FFDADD", "#FFD3D7", "#FFCDD2", "#FCE4EC", "#FACEDD", "#F8B9CE", "#F6A4BF", "#F48FB1", "#F3E5F5", "#E9D0ED", "#E0BCE6", "#D7A7DF", "#CE93D8", "#FFF3E0", "#FFE9C8", "#FFDFB0", "#FFD598", "#FFCC80", "#FBE9E7", "#FCD9D1", "#FDCABC", "#FEBAA6", "#FFAB91", "#FFF0F5", "#FFE1E8", "#FFD3DB", "#FFC4CE", "#FFB6C1"],
+            coolPastels: ["#E3F2FD", "#CEE8FC", "#B9DEFB", "#A4D4FA", "#90CAF9", "#E1F5FE", "#C9ECFD", "#B1E4FC", "#99DCFB", "#81D4FA", "#E0F7FA", "#C8F0F6", "#B0EAF2", "#98E4EE", "#80DEEA", "#E8EAF6", "#D5D9EF", "#C3C9E8", "#B1B8E1", "#9FA8DA", "#F3E5F5", "#E3D3EE", "#D3C1E8", "#C3AFE1", "#B39DDB", "#EBF4FA", "#DBECF7", "#CCE5F5", "#BDDDF3", "#AED6F1"],
+            vividPastels: ["#CCFF90", "#B6FF6C", "#A1FF49", "#8BFF26", "#76FF03", "#84FFFF", "#63F8FF", "#42F2FF", "#21EBFF", "#00E5FF", "#FF80AB", "#FC6096", "#FA4081", "#F7206C", "#F50057", "#EA80FC", "#E460FB", "#DF40FA", "#DA20F9", "#D500F9", "#FFFF8D", "#FFF969", "#FFF446", "#FFEF23", "#FFEA00", "#B2FF59", "#9EF648", "#8BEE38", "#77E527", "#64DD17", "#FFCA28", "#FFBB1E", "#FFAC14", "#FF9D0A", "#FF8F00"],
+            warmTones: ["#FFF9C4", "#FEEDA5", "#FDE287", "#FCD669", "#FBCB4B", "#FBC02D", "#FFECB3", "#FFDC8F", "#FFCD6B", "#FFBE47", "#FFAF23", "#FFA000", "#FFE0B2", "#FDCC8E", "#FBB86A", "#F9A447", "#F79023", "#F57C00", "#FFCCBC", "#FAB29B", "#F5987A", "#F07E5A", "#EB6439", "#E64A19", "#D7CCC8", "#C4B4AE", "#B19C94", "#9E847B", "#8B6C61", "#795548", "#FFAB91", "#F79678", "#EF815F", "#E76C46", "#DF572D", "#D84315"],
+            earthyTones: ["#E8F5E9", "#C4E0C6", "#A1CBA3", "#7EB781", "#5BA25E", "#388E3C", "#F1F8E9", "#D5E6C5", "#BAD4A2", "#9EC27E", "#83B05B", "#689F38", "#F9FBE7", "#EAECC1", "#DBDE9B", "#CCD076", "#BDC250", "#AFB42B", "#E0F2F1", "#B3D9D6", "#86C1BB", "#59A9A0", "#2C9185", "#00796B", "#DCEDC8", "#C1D9A9", "#A6C58A", "#8BB26C", "#709E4D", "#558B2F", "#8D6E63", "#806258", "#73564D", "#674B43", "#5A3F38", "#4E342E"],
+            neutralTones: ["#CFD8DC", "#B3BEC4", "#97A5AC", "#7C8C94", "#60737C", "#455A64", "#F5F5F5", "#D7D7D7", "#B9B9B9", "#9C9C9C", "#7E7E7E", "#616161", "#EFEBE9", "#D1C8C5", "#B4A6A1", "#97847E", "#7A625A", "#5D4037", "#FAFAFA", "#EEEEEE", "#424242", "#373737", "#2C2C2C", "#212121", "#FFFFFF", "#000000", "#D7CCC8", "#C8B9B3", "#B9A69F", "#AA938B", "#9B8077", "#8D6E63"]
         };
 
-        // --- Logic: calculateOverlayColor ---
+        const initialPatterns = [
+            { type: 'wave', name: 'Wave Preset', params: { waveCount: 3, frequency: 1.5, amplitude: 30.0, curvature: 0.5, opacity: 0.15, yOffset: -0.1 } },
+            { type: 'circle', name: 'Circle Preset', params: { count: 30, minRadius: 4.0, maxRadius: 18.0, opacity: 0.25, gridWeights: [1, 1, 1, 1, 1, 1, 1, 1, 1], flowScale: { dir: 'B_T', range: [0.3, 2.5] } } },
+            { type: 'rectangle', name: 'Rect Preset', params: { count: 40, minSize: 8.0, maxSize: 25.0, opacity: 0.2, cornerRadius: 4.0, gridWeights: [1, 1, 1, 1, 0, 1, 1, 1, 1], flowScale: { dir: 'C_OUT', range: [0.5, 1.5] } } },
+            { type: 'star', name: 'Star Preset', params: { count: 50, points: 5, minSize: 10.0, maxSize: 30.0, opacity: 0.35, gridWeights: [10, 0, 0, 0, 5, 0, 0, 0, 1], flowScale: { dir: 'TL_BR', range: [2.5, 0.3] } } },
+            { type: 'mixed', name: 'Mixed Preset', params: { shape: 'heart', count: 35, minSize: 15.0, maxSize: 45.0, opacity: 0.25, gridWeights: [1, 1, 1, 1, 0, 1, 1, 1, 1], flowScale: { dir: 'C_OUT', range: [0.6, 1.4] } } },
+        ];
+
+        // -----------------------------------------------------------------------------
+        // 2. Logic Helpers & Components
+        // -----------------------------------------------------------------------------
         const calculateOverlayColor = (hex) => {
             if (!hex) return { type: 'rgba', r: 255, g: 255, b: 255, a: 0.15, rule: 'Default', condition: 'N/A', hsl: 'N/A', luma: 1 };
             let cleanHex = hex.replace('#', '');
@@ -115,35 +83,83 @@
             }
             const luma = 0.299 * r + 0.587 * g + 0.114 * b;
             const hslString = `H:${Math.round(h*360)} S:${Math.round(s*100)} L:${Math.round(l*100)} Y:${Math.round(luma*100)}`;
-            if (luma < 0.25) {
-                const dynamicAlpha = 0.12 + (0.25 - luma) * 0.3; 
-                return { type: 'rgba', r: 255, g: 255, b: 255, a: dynamicAlpha, rule: 'Midnight Glow', condition: 'Luma < 0.25', hsl: hslString, luma };
-            } else if (luma < 0.6) {
-                const alpha = s > 0.5 ? 0.40 : 0.25;
-                return { type: 'rgba', r: 255, g: 255, b: 255, a: alpha, rule: s > 0.5 ? 'Neon Pop' : 'Muted Elegance', condition: 'Mid-Luma', hsl: hslString, luma };
-            } else if (luma < 0.85) {
-                let newL = Math.min(1.0, l * 2.0); 
-                let newS = s * 0.5;
-                let dynamicAlpha = 0.35 + (luma - 0.6) * 0.2; 
-                return { type: 'hsla', h: h * 360, s: newS * 100, l: newL * 100, a: dynamicAlpha, rule: 'Pigment Tint', condition: 'High Luma', hsl: hslString, luma };
-            } else {
-                let newL = Math.max(0.2, l - 0.45); 
-                let newS = s === 0 ? 0 : Math.min(1.0, s + 0.3); 
-                let finalH = h * 360;
-                if (s > 0.05 && finalH >= 40 && finalH <= 75) finalH = Math.max(0, finalH - 18);
-                return { type: 'hsla', h: finalH, s: newS * 100, l: newL * 100, a: 0.15, rule: 'Deep Tone-on-Tone', condition: 'Ultra Light', hsl: hslString, luma };
-            }
+            
+            if (luma < 0.25) return { type: 'rgba', r: 255, g: 255, b: 255, a: 0.15, rule: 'Midnight Glow', condition: 'Luma < 0.25', hsl: hslString, luma };
+            if (luma < 0.6) return { type: 'rgba', r: 255, g: 255, b: 255, a: s > 0.5 ? 0.40 : 0.25, rule: s > 0.5 ? 'Neon Pop' : 'Muted Elegance', condition: 'Mid-Luma', hsl: hslString, luma };
+            if (luma < 0.85) return { type: 'hsla', h: h * 360, s: (s * 0.5) * 100, l: (l * 2.0) * 100, a: 0.35, rule: 'Pigment Tint', condition: 'High Luma', hsl: hslString, luma };
+            
+            let newL = Math.max(0.2, l - 0.45); 
+            let newS = s === 0 ? 0 : Math.min(1.0, s + 0.3); 
+            let finalH = h * 360;
+            if (s > 0.05 && finalH >= 40 && finalH <= 75) finalH = Math.max(0, finalH - 18);
+            return { type: 'hsla', h: finalH, s: newS * 100, l: newL * 100, a: 0.15, rule: 'Deep Tone-on-Tone', condition: 'Ultra Light', hsl: hslString, luma };
         };
 
-        const initialPatterns = [
-            { type: 'wave', name: 'Wave Theme 1', params: { waveCount: 3, amplitude: 10.0, curvature: 0.1, opacity: 0.15, yOffset: -0.1 } },
-            { type: 'wave', name: 'Wave Theme 6', params: { waveCount: 5, amplitude: 27.5, curvature: 0.35, opacity: 0.25, yOffset: 0.0 } },
-            { type: 'circle', name: 'Rising Bubbles 1', params: { count: 20, minRadius: 4.0, maxRadius: 18.0, opacity: 0.25, gridWeights: [0, 0, 0, 1, 1, 1, 5, 5, 5], flowScale: { dir: 'B_T', range: [0.3, 2.5] } } },
-            { type: 'circle', name: 'Concentric Splash 2', params: { count: 7, minRadius: 15.0, maxRadius: 130.0, opacity: 0.15, concentric: true, yStart: 0.1 } },
-            { type: 'rectangle', name: 'Confetti Border 1', params: { count: 30, minSize: 8.0, maxSize: 25.0, opacity: 0.2, cornerRadius: 4.0, gridWeights: [1, 1, 1, 1, 0, 1, 1, 1, 1], flowScale: { dir: 'C_OUT', range: [0.5, 1.5] } } },
-            { type: 'star', name: 'Milky Way 1', params: { count: 30, points: 5, minSize: 10.0, maxSize: 30.0, opacity: 0.35, gridWeights: [10, 0, 0, 0, 5, 0, 0, 0, 1], flowScale: { dir: 'TL_BR', range: [2.5, 0.3] } } },
-            { type: 'mixed', name: 'Deco Heart 1', params: { shape: 'heart', count: 25, minSize: 15.0, maxSize: 45.0, opacity: 0.25, gridWeights: [1, 1, 1, 1, 0, 1, 1, 1, 1], flowScale: { dir: 'C_OUT', range: [0.6, 1.4] } } },
-        ];
+        const generateTransform = (random, width, height, params) => {
+            let weights = params.gridWeights || [1, 1, 1, 1, 1, 1, 1, 1, 1];
+            const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+            let pick = random() * (totalWeight || 1);
+            let zoneIndex = 0;
+            for (let i = 0; i < 9; i++) {
+                pick -= weights[i];
+                if (pick <= 0) { zoneIndex = i; break; }
+            }
+            const zoneX = zoneIndex % 3;
+            const zoneY = Math.floor(zoneIndex / 3);
+            const dx = (zoneX * (width / 3.0)) + (random() * (width / 3.0));
+            const dy = (zoneY * (height / 3.0)) + (random() * (height / 3.0));
+            let scaleMultiplier = 1.0;
+            if (params.flowScale) {
+                const dir = params.flowScale.dir || 'NONE';
+                const range = params.flowScale.range || [1.0, 1.0];
+                let progress = 0.0;
+                // 모든 플로우 방향 계산식 추가 적용
+                switch (dir) {
+                    case 'TL_BR': progress = ((dx / width) + (dy / height)) / 2.0; break;
+                    case 'TR_BL': progress = ((1.0 - (dx / width)) + (dy / height)) / 2.0; break;
+                    case 'T_B': progress = dy / height; break;
+                    case 'B_T': progress = 1.0 - (dy / height); break;
+                    case 'L_R': progress = dx / width; break;
+                    case 'R_L': progress = 1.0 - (dx / width); break;
+                    case 'C_OUT': progress = Math.min(1.0, Math.sqrt(Math.pow((dx/width)-0.5, 2) + Math.pow((dy/height)-0.5, 2)) * 1.414); break;
+                    default: progress = 0.0;
+                }
+                scaleMultiplier = range[0] + (range[1] - range[0]) * Math.max(0, Math.min(1, progress));
+            }
+            return { x: dx, y: dy, scaleMultiplier };
+        };
+
+        const Icon = ({ name, size = 18, color = 'currentColor', className = '' }) => {
+            const spanRef = useRef(null);
+            useEffect(() => {
+                if (spanRef.current && window.lucide && window.lucide.icons[name]) {
+                    spanRef.current.innerHTML = `<i data-lucide="${name}"></i>`;
+                    window.lucide.createIcons({
+                        root: spanRef.current,
+                        nameAttr: 'data-lucide',
+                        attrs: { width: size, height: size, stroke: color, class: className, 'stroke-width': 2.5 }
+                    });
+                }
+            }, [name, size, color, className]);
+            return <span ref={spanRef} className={`inline-flex items-center justify-center ${className}`}></span>;
+        };
+
+        const getParamConfig = (key) => {
+            switch (key) {
+                case 'count': return { min: 1, max: 2000, step: 1 };
+                case 'waveCount': return { min: 1, max: 20, step: 1 };
+                case 'frequency': return { min: 0.1, max: 10, step: 0.1 };
+                case 'points': return { min: 3, max: 20, step: 1 };
+                case 'amplitude': return { min: 0, max: 300, step: 1 };
+                case 'curvature': return { min: -2, max: 2, step: 0.01 };
+                case 'opacity': return { min: 0, max: 1, step: 0.01 };
+                case 'yOffset': case 'yStart': return { min: -1, max: 1, step: 0.01 };
+                case 'minRadius': case 'maxRadius': 
+                case 'minSize': case 'maxSize': return { min: 1, max: 300, step: 1 };
+                case 'cornerRadius': return { min: 0, max: 100, step: 1 };
+                default: return { min: 0, max: 100, step: 1 };
+            }
+        };
 
         const PatternCanvas = ({ theme, pattern, engineRule, width, height }) => {
             const canvasRef = useRef(null);
@@ -155,105 +171,121 @@
                 canvas.width = width * dpr; canvas.height = height * dpr;
                 ctx.scale(dpr, dpr); ctx.clearRect(0, 0, width, height);
                 const { type, params } = pattern;
-                const baseOpacity = params.opacity || 0.25;
                 const drawColor = (elementOpacity) => {
-                    const safeBaseOpacity = baseOpacity === 0 ? 0.01 : baseOpacity;
+                    const safeBaseOpacity = params.opacity || 0.25 || 0.01;
                     const finalAlpha = engineRule.a * (elementOpacity / safeBaseOpacity);
-                    return engineRule.type === 'rgba' ? `rgba(${engineRule.r}, ${engineRule.g}, ${engineRule.b}, ${finalAlpha})` : `hsla(${engineRule.h}, ${engineRule.s}%, ${engineRule.l}%, ${finalAlpha})`;
+                    if (engineRule.type === 'rgba') return `rgba(${engineRule.r}, ${engineRule.g}, ${engineRule.b}, ${finalAlpha})`;
+                    return `hsla(${engineRule.h}, ${engineRule.s}%, ${engineRule.l}%, ${finalAlpha})`;
                 };
                 let seed = 123;
                 const random = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+                
                 if (type === 'wave') {
-                    const { waveCount = 3, amplitude = 10, opacity = 0.2, yOffset = 0, curvature = 0.1 } = params;
+                    const waveCount = params.waveCount || 3;
+                    const amplitude = params.amplitude || 10;
+                    const frequency = params.frequency || 1;
+                    const curvature = params.curvature || 0;
+                    const yOffset = params.yOffset || 0;
+                    
                     for (let i = 0; i < waveCount; i++) {
                         ctx.beginPath();
-                        const startY = height * (0.3 + i * 0.15 + yOffset); ctx.moveTo(0, startY);
-                        const cp1x = width * (0.25 + (i * curvature)); const cp1y = height * (0.2 + i * 0.1 + yOffset) - amplitude;
-                        const cp2x = width * (0.65 - (i * curvature)); const cp2y = height * (0.5 + i * 0.1 + yOffset) + amplitude;
-                        const endY = height * (0.4 + i * 0.15 + yOffset);
-                        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, width, endY); ctx.lineTo(width, height); ctx.lineTo(0, height);
-                        const g = ctx.createLinearGradient(0, 0, 0, height); g.addColorStop(0, drawColor(0)); g.addColorStop(1, drawColor(opacity));
-                        ctx.fillStyle = g; ctx.fill();
+                        const baseY = height * (0.3 + i * 0.15 + yOffset);
+                        ctx.moveTo(0, baseY);
+
+                        for (let x = 0; x <= width + 5; x += 5) {
+                            const nx = x / width;
+                            const distortedNx = nx + (curvature * 0.3) * Math.sin(nx * Math.PI * 2);
+                            const y = baseY + Math.sin(distortedNx * Math.PI * 2 * frequency) * amplitude;
+                            ctx.lineTo(x, y);
+                        }
+                        ctx.lineTo(width, height); 
+                        ctx.lineTo(0, height);
+                        
+                        const g = ctx.createLinearGradient(0, 0, 0, height); 
+                        g.addColorStop(0, drawColor(0)); 
+                        g.addColorStop(1, drawColor(params.opacity || 0.2));
+                        ctx.fillStyle = g; 
+                        ctx.fill();
                     }
                 } else if (type === 'circle') {
-                    const { count = 10, minRadius = 5, maxRadius = 20, opacity = 0.2, concentric = false, yStart = 0 } = params;
-                    if (concentric) {
+                    const count = params.count || 10;
+                    const minRadius = params.minRadius || 5;
+                    const maxRadius = params.maxRadius || 20;
+                    if (params.concentric) {
                         for (let i = 0; i < count; i++) {
                             const r = minRadius + (maxRadius - minRadius) * (i / count);
-                            ctx.beginPath(); ctx.arc(width/2, height/2 + (height * yStart / 2), r, 0, Math.PI*2);
-                            ctx.fillStyle = drawColor(opacity * (1 - i/count)); ctx.fill();
+                            ctx.beginPath(); ctx.arc(width/2, height/2 + (height * (params.yStart || 0) / 2), r, 0, Math.PI*2);
+                            ctx.fillStyle = drawColor((params.opacity || 0.2) * (1 - i/count)); ctx.fill();
                         }
                     } else {
                         for (let i = 0; i < count; i++) {
                             const {x, y, scaleMultiplier} = generateTransform(random, width, height, params);
                             const r = (minRadius + random() * (maxRadius - minRadius)) * scaleMultiplier;
-                            ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fillStyle = drawColor(opacity); ctx.fill();
+                            ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+                            ctx.fillStyle = drawColor(params.opacity || 0.2); ctx.fill();
                         }
                     }
                 } else if (type === 'rectangle') {
-                    const { count = 10, minSize = 5, maxSize = 20, opacity = 0.2, cornerRadius = 0 } = params;
-                    for (let i = 0; i < count; i++) {
-                        const {x, y, scaleMultiplier} = generateTransform(random, width, height, params);
-                        const size = (minSize + random() * (maxSize - minSize)) * scaleMultiplier;
-                        ctx.save(); ctx.translate(x, y); ctx.rotate(random() * Math.PI * 2); ctx.fillStyle = drawColor(opacity);
-                        if (cornerRadius > 0) { ctx.beginPath(); ctx.roundRect(-size/2, -size/2, size, size, cornerRadius * scaleMultiplier); ctx.fill(); }
-                        else { ctx.fillRect(-size/2, -size/2, size, size); } ctx.restore();
-                    }
-                } else if (type === 'star') {
-                    const { count = 10, points = 5, minSize = 5, maxSize = 20, opacity = 0.2 } = params;
+                    const count = params.count || 10;
+                    const minSize = params.minSize || 10;
+                    const maxSize = params.maxSize || 20;
                     for (let i = 0; i < count; i++) {
                         const {x, y, scaleMultiplier} = generateTransform(random, width, height, params);
                         const s = (minSize + random() * (maxSize - minSize)) * scaleMultiplier;
-                        ctx.save(); ctx.translate(x, y); ctx.rotate(random() * Math.PI * 2); ctx.fillStyle = drawColor(opacity);
+                        ctx.save(); ctx.translate(x, y); ctx.rotate(random() * Math.PI * 2); ctx.fillStyle = drawColor(params.opacity || 0.2);
+                        if (params.cornerRadius > 0) { ctx.beginPath(); ctx.roundRect(-s/2, -s/2, s, s, params.cornerRadius * scaleMultiplier); ctx.fill(); }
+                        else { ctx.fillRect(-s/2, -s/2, s, s); } ctx.restore();
+                    }
+                } else if (type === 'star') {
+                    const count = params.count || 10;
+                    const minSize = params.minSize || 10;
+                    const maxSize = params.maxSize || 20;
+                    const points = params.points || 5;
+                    for (let i = 0; i < count; i++) {
+                        const {x, y, scaleMultiplier} = generateTransform(random, width, height, params);
+                        const s = (minSize + random() * (maxSize - minSize)) * scaleMultiplier;
+                        ctx.save(); ctx.translate(x, y); ctx.rotate(random() * Math.PI * 2); ctx.fillStyle = drawColor(params.opacity || 0.2);
                         ctx.beginPath(); ctx.moveTo(0, -s);
                         for (let j = 0; j < points * 2; j++) {
-                            const r = j % 2 === 0 ? s : s * 0.4; const a = (j * Math.PI / points) - Math.PI / 2;
+                            const r = j % 2 === 0 ? s : s * 0.4; const a = (j * Math.PI / points) - Math.PI/2;
                             ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
                         }
                         ctx.closePath(); ctx.fill(); ctx.restore();
                     }
                 } else if (type === 'mixed') {
-                    const { shape = 'circle', count = 10, minSize = 5, maxSize = 20, opacity = 0.2 } = params;
+                    const count = params.count || 10;
+                    const minSize = params.minSize || 10;
+                    const maxSize = params.maxSize || 20;
+                    const shape = params.shape || 'circle';
                     for (let i = 0; i < count; i++) {
                         const {x, y, scaleMultiplier} = generateTransform(random, width, height, params);
                         const s = (minSize + random() * (maxSize - minSize)) * scaleMultiplier;
-                        ctx.save(); ctx.translate(x, y); ctx.rotate(random() * Math.PI * 2); ctx.fillStyle = drawColor(opacity);
+                        ctx.save(); ctx.translate(x, y); ctx.rotate(random() * Math.PI * 2); ctx.fillStyle = drawColor(params.opacity || 0.2);
                         ctx.beginPath();
                         if (shape === 'heart') { ctx.moveTo(0, s/4); ctx.bezierCurveTo(-s, -s/2, -s/4, -s, 0, -s/4); ctx.bezierCurveTo(s/4, -s, s, -s/2, 0, s/4); }
                         else if (shape === 'cloud') { ctx.arc(-s/3, 0, s/3, 0, Math.PI*2); ctx.arc(s/3, 0, s/3, 0, Math.PI*2); ctx.arc(0, -s/4, s/2.5, 0, Math.PI*2); }
-                        else { ctx.arc(0, 0, s/2, 0, Math.PI*2); }
+                        else if (shape === 'triangle') { ctx.moveTo(0, -s/2); ctx.lineTo(s/2, s/2); ctx.lineTo(-s/2, s/2); }
+                        else if (shape === 'hexagon') { for (let j = 0; j < 6; j++) { const a = j * Math.PI / 3; ctx.lineTo(s/2 * Math.cos(a), s/2 * Math.sin(a)); } }
+                        else if (shape === 'diamond') { ctx.moveTo(0, -s/2); ctx.lineTo(s/2, 0); ctx.lineTo(0, s/2); ctx.lineTo(-s/2, 0); }
+                        else if (shape === 'cross' || shape === 'plus') { const t = s * 0.2; ctx.rect(-t/2, -s/2, t, s); ctx.rect(-s/2, -t/2, s, t); }
+                        else { ctx.arc(0,0,s/2,0,Math.PI*2); }
                         ctx.fill(); ctx.restore();
                     }
                 }
             }, [theme, pattern, engineRule, width, height]);
-            return <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} className="block rounded-[32px]" />;
+            return <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} className="block" />;
         };
 
+        // -----------------------------------------------------------------------------
+        // 3. Main App Component
+        // -----------------------------------------------------------------------------
         const App = () => {
             const [patterns, setPatterns] = useState(initialPatterns);
             const [selectedTheme, setSelectedTheme] = useState({ color: "#FFE8E8", text: "#333333", category: "warmPastels", name: "Soft Pink" });
             const [selectedPatternBase, setSelectedPatternBase] = useState(patterns[0]);
             const [patternParams, setPatternParams] = useState(patterns[0].params);
             const [copyStatus, setCopyStatus] = useState(null);
-
-            const colors = {
-                warmPastels: ["#FFE8E8", "#FFCDD2", "#F8B9CE", "#CE93D8", "#FFCC80", "#FFAB91"],
-                coolPastels: ["#E3F2FD", "#90CAF9", "#81D4FA", "#80DEEA", "#9FA8DA", "#B39DDB"],
-                vividPastels: ["#CCFF90", "#76FF03", "#00E5FF", "#F50057", "#D500F9", "#FFEA00"],
-                warmTones: ["#FBC02D", "#FFA000", "#F57C00", "#E64A19", "#795548", "#D84315"],
-                earthyTones: ["#388E3C", "#689F38", "#AFB42B", "#00796B", "#558B2F", "#4E342E"],
-                neutralTones: ["#455A64", "#616161", "#5D4037", "#FFFFFF", "#000000", "#8D6E63"]
-            };
-
-            const allThemes = useMemo(() => {
-                const list = [];
-                Object.entries(colors).forEach(([catId, hexCodes]) => {
-                    hexCodes.forEach(hex => {
-                        list.push({ color: hex, text: calculateOverlayColor(hex).luma > 0.6 ? "#333333" : "#FFFFFF", category: catId, name: `Theme ${hex}` });
-                    });
-                });
-                return list;
-            }, []);
+            const [activeTab, setActiveTab] = useState('colors');
 
             useEffect(() => { setPatternParams(selectedPatternBase.params); }, [selectedPatternBase]);
 
@@ -281,79 +313,212 @@
 
             const engineRule = useMemo(() => calculateOverlayColor(selectedTheme?.color || "#FFFFFF"), [selectedTheme]);
 
+            // 에디터 속성값 한글 번역 매핑
+            const paramLabels = {
+                gridWeights: "그리드 밀도 (3x3)",
+                flowScale: "스케일 방향",
+                shape: "도형 모양",
+                count: "개수",
+                waveCount: "물결 개수",
+                frequency: "진동수 (파동 횟수)",
+                points: "꼭짓점 개수",
+                amplitude: "진폭 (높이)",
+                curvature: "곡률 (형태 왜곡)",
+                opacity: "투명도",
+                yOffset: "Y축 위치",
+                yStart: "Y축 시작점",
+                minRadius: "최소 반지름",
+                maxRadius: "최대 반지름",
+                minSize: "최소 크기",
+                maxSize: "최대 크기",
+                cornerRadius: "모서리 둥글기",
+                concentric: "동심원 모드",
+                twinkle: "반짝임 효과"
+            };
+
             return (
-                <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row h-screen overflow-hidden text-gray-800">
-                    <div className="w-full lg:w-[70%] flex flex-col h-full border-r border-gray-100 bg-white shadow-inner" style={{ backgroundColor: selectedTheme.color + '08' }}>
-                        <div className="w-full px-8 pt-8 pb-6 flex-shrink-0 z-10 border-b border-gray-100 bg-white/40 backdrop-blur-md">
-                            <header className="mb-6 flex justify-between items-center">
+                <div className="h-screen w-screen flex flex-col lg:flex-row overflow-hidden bg-gray-50 text-gray-800">
+                    
+                    {/* Left Column: Fixed Card & Scrollable Editor */}
+                    <div className="w-full lg:w-[65%] flex flex-col h-[65%] lg:h-full border-b lg:border-b-0 lg:border-r border-gray-200 bg-white" style={{ backgroundColor: selectedTheme.color + '05' }}>
+                        
+                        {/* 1) Fixed Top Area: Header & Reduced Card */}
+                        <div className="flex-shrink-0 w-full px-6 lg:px-8 pt-6 pb-5 border-b border-gray-100 bg-white/70 backdrop-blur-xl shadow-sm z-10 flex flex-col items-center">
+                            <header className="w-full max-w-[420px] mb-4 flex justify-between items-center">
                                 <div>
-                                    <h1 className="text-3xl font-black mb-1 text-gray-900 tracking-tight">Style Canvas</h1>
-                                    <p className="text-xs text-gray-500 uppercase tracking-widest">DEPLOY READY v4.0</p>
+                                    <h1 className="text-xl lg:text-2xl font-black mb-1 text-gray-900 tracking-tight flex items-center gap-2">
+                                        <Icon name="Layers" size={22} color="#3b82f6" /> Style Canvas
+                                    </h1>
+                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold ml-8">Design Engine v6.0</p>
                                 </div>
                             </header>
-                            <div className="flex flex-col xl:flex-row gap-6">
-                                <div className="flex-1 max-w-[550px]">
-                                    <div className="w-full shadow-2xl rounded-[32px] overflow-hidden relative border border-white/40" style={{ aspectRatio: '360/185', backgroundColor: selectedTheme.color }}>
-                                        <div className="absolute inset-0">
-                                            <PatternCanvas theme={selectedTheme} pattern={{ type: selectedPatternBase.type, params: patternParams }} engineRule={engineRule} width={600} height={600 * (185/360)} />
-                                        </div>
-                                        <div className="relative z-10 p-8 h-full flex flex-col justify-between pointer-events-none">
-                                            <h2 className="text-2xl font-bold" style={{ color: selectedTheme.text }}>{selectedTheme.name}</h2>
-                                        </div>
+                            
+                            {/* Card: Reduced Size (max-w 420px) */}
+                            <div className="w-full max-w-[420px]">
+                                <div className="w-full shadow-xl rounded-[24px] overflow-hidden relative border border-white/60 mb-3" style={{ aspectRatio: '360/185', backgroundColor: selectedTheme.color }}>
+                                    <div className="absolute inset-0">
+                                        <PatternCanvas theme={selectedTheme} pattern={{ type: selectedPatternBase.type, params: patternParams }} engineRule={engineRule} width={600} height={600 * (185/360)} />
                                     </div>
-                                    <div className="mt-4 grid grid-cols-2 gap-3 text-[11px] font-bold">
-                                        <div className="bg-white/90 p-3 rounded-xl border flex gap-2 items-center"><Icon name="Cpu" size={14} color="#3b82f6" /> {engineRule.rule}</div>
-                                        <div className="bg-white/90 p-3 rounded-xl border flex gap-2 items-center"><Icon name="Palette" size={14} color="#10b981" /> Alpha {Math.round(engineRule.a * 100)}%</div>
+                                    <div className="relative z-10 p-5 h-full flex flex-col justify-between pointer-events-none">
+                                        <h2 className="text-xl font-bold tracking-tight drop-shadow-md" style={{ color: selectedTheme.text }}>{selectedTheme.name}</h2>
                                     </div>
                                 </div>
-                                <div className="w-full xl:w-[380px] bg-white p-5 rounded-3xl border shadow-xl flex flex-col max-h-[350px]">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h3 className="text-xs font-black uppercase">Editor</h3>
-                                        <div className="flex gap-2">
-                                            <button onClick={() => copyToClipboard(patternParams, 'EDITOR')} className="text-[10px] px-2 py-1 bg-gray-100 rounded-lg">{copyStatus === 'EDITOR' ? 'Copied!' : 'Copy'}</button>
-                                            <button onClick={handleSavePattern} className="text-[10px] px-2 py-1 bg-blue-500 text-white rounded-lg">Save</button>
-                                        </div>
-                                    </div>
-                                    <div className="overflow-y-auto pr-2 custom-scrollbar">
-                                        {Object.entries(patternParams).map(([key, value]) => (
-                                            <div key={key} className="py-1">
-                                                <div className="flex justify-between text-[10px] font-bold mb-1">
-                                                    <span>{key}</span>
-                                                    <span className="text-blue-600">{typeof value === 'number' ? value.toFixed(2) : String(value)}</span>
-                                                </div>
-                                                {typeof value === 'number' ? (
-                                                    <input type="range" min="0" max={key === 'count' ? 2000 : (key === 'amplitude' ? 200 : 1)} step="0.01" value={value} onChange={(e) => handleParamChange(key, parseFloat(e.target.value))} className="w-full h-1 accent-blue-500" />
-                                                ) : <div className="text-[9px] bg-gray-50 p-1 rounded italic">{JSON.stringify(value)}</div>}
-                                            </div>
-                                        ))}
-                                    </div>
+                                <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
+                                    <div className="bg-white/90 p-2 rounded-xl border border-gray-100 shadow-sm flex gap-1.5 items-center justify-center text-gray-700"><Icon name="Cpu" size={12} color="#3b82f6" /> {engineRule.rule}</div>
+                                    <div className="bg-white/90 p-2 rounded-xl border border-gray-100 shadow-sm flex gap-1.5 items-center justify-center text-gray-700"><Icon name="Palette" size={12} color="#10b981" /> Alpha {Math.round(engineRule.a * 100)}%</div>
                                 </div>
                             </div>
                         </div>
-                        <div className="w-full px-8 py-8 flex-1 overflow-y-auto bg-gray-50/30">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-24">
-                                {patterns.map((pat, idx) => (
-                                    <div key={idx} onClick={() => setSelectedPatternBase(pat)} className={`p-5 rounded-[32px] border cursor-pointer transition-all ${selectedPatternBase.name === pat.name ? 'border-blue-500 bg-white ring-4 ring-blue-50 shadow-xl' : 'bg-white/80'}`}>
-                                        <div className="flex justify-between items-center mb-3">
-                                            <span className="text-sm font-bold">{pat.name}</span>
-                                            <button onClick={(e) => { e.stopPropagation(); copyToClipboard(pat.params, pat.name); }} className="p-1.5 bg-gray-100 rounded-lg"><Icon name="Copy" size={14} /></button>
-                                        </div>
-                                        <div className="text-[10px] font-mono bg-gray-50 p-3 rounded-xl overflow-x-auto">
-                                            params: {'{'}{Object.entries(pat.params).map(([k,v]) => `\n  '${k}': ${formatValueForCopy(v)},`)}\n{'}'}
-                                        </div>
+
+                        {/* 2) Bottom Scrollable Area: Live Editor Only */}
+                        <div className="flex-1 min-h-0 overflow-y-auto p-6 lg:p-8 custom-scrollbar bg-gray-50/30">
+                            <div className="w-full max-w-[500px] mx-auto bg-white p-6 lg:p-7 rounded-[28px] border border-gray-100 shadow-md flex flex-col">
+                                <div className="flex justify-between items-center mb-6 border-b border-gray-50 pb-4">
+                                    <h3 className="text-sm font-black uppercase flex items-center gap-2 tracking-widest text-gray-800"><Icon name="Sliders" size={16} color="#3b82f6" /> Live Editor</h3>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => copyToClipboard(patternParams, 'EDITOR')} className={`text-[10px] px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1 ${copyStatus === 'EDITOR' ? 'bg-emerald-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                                            <Icon name={copyStatus === 'EDITOR' ? 'Check' : 'Copy'} size={12} /> {copyStatus === 'EDITOR' ? 'Copied' : 'Copy'}
+                                        </button>
+                                        <button onClick={handleSavePattern} className="text-[10px] px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold flex items-center gap-1 shadow-sm">
+                                            <Icon name="Save" size={12} /> Save
+                                        </button>
                                     </div>
-                                ))}
+                                </div>
+
+                                <div className="flex flex-col gap-4">
+                                    {Object.entries(patternParams).map(([key, value]) => {
+                                        if (key === 'gridWeights') return (
+                                            <div key={key} className="py-2">
+                                                <span className="text-[10px] font-bold text-gray-500 block mb-2 uppercase tracking-wider">{paramLabels[key] || 'Grid Density'}</span>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    {value.map((w, i) => <input key={i} type="number" value={w} onChange={(e) => { const nw = [...value]; nw[i] = parseInt(e.target.value) || 0; handleParamChange(key, nw); }} className="w-full bg-gray-50 border border-gray-200 text-xs text-center font-mono py-2 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" />)}
+                                                </div>
+                                            </div>
+                                        );
+                                        if (key === 'flowScale') return (
+                                            <div key={key} className="py-2 border-t border-gray-50 mt-1 pt-4">
+                                                <div className="flex justify-between items-center mb-3">
+                                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{paramLabels[key] || 'Flow Scale'}</span>
+                                                    <select value={value.dir} onChange={(e) => handleParamChange(key, { ...value, dir: e.target.value })} className="text-xs font-bold border border-gray-200 rounded-xl px-2 py-1.5 outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500 transition-all">
+                                                        {[{v: 'NONE', l: '없음'}, {v: 'TL_BR', l: '좌상 ➔ 우하'}, {v: 'TR_BL', l: '우상 ➔ 좌하'}, {v: 'T_B', l: '위 ➔ 아래'}, {v: 'B_T', l: '아래 ➔ 위'}, {v: 'L_R', l: '좌 ➔ 우'}, {v: 'R_L', l: '우 ➔ 좌'}, {v: 'C_OUT', l: '중앙 ➔ 바깥'}].map(d => <option key={d.v} value={d.v}>{d.l}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="flex gap-5">
+                                                    {['시작 크기', '종료 크기'].map((l, idx) => (
+                                                        <div key={l} className="flex-1"><span className="text-[10px] font-bold text-gray-400 block mb-2">{l}: <span className="text-blue-500">{value.range[idx].toFixed(1)}</span></span>
+                                                            <input type="range" min="0" max="4" step="0.1" value={value.range[idx]} onChange={(e) => { const nr = [...value.range]; nr[idx] = parseFloat(e.target.value); handleParamChange(key, { ...value, range: nr }); }} className="w-full h-1.5 accent-blue-500" />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                        if (typeof value === 'number') {
+                                            const config = getParamConfig(key);
+                                            return (
+                                                <div key={key} className="py-1.5 border-t border-gray-50 mt-1 pt-3">
+                                                    <div className="flex justify-between text-[11px] font-bold mb-2 uppercase tracking-wide text-gray-600"><span>{paramLabels[key] || key}</span><span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg">{value.toFixed(2)}</span></div>
+                                                    <input type="range" min={config.min} max={config.max} step={config.step} value={value} onChange={(e) => handleParamChange(key, parseFloat(e.target.value))} className="w-full h-1.5 accent-blue-500" />
+                                                </div>
+                                            );
+                                        }
+                                        if (key === 'shape') return (
+                                            <div key={key} className="flex justify-between items-center py-2 border-t border-gray-50 mt-1 pt-3">
+                                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{paramLabels[key] || 'Shape Type'}</span>
+                                                <select value={value} onChange={(e) => handleParamChange(key, e.target.value)} className="text-xs font-bold border border-gray-200 rounded-xl px-3 py-1.5 outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500 transition-all">
+                                                    {[{v: 'circle', l: '원형'}, {v: 'triangle', l: '삼각형'}, {v: 'hexagon', l: '육각형'}, {v: 'diamond', l: '마름모'}, {v: 'cross', l: '십자'}, {v: 'plus', l: '플러스'}, {v: 'heart', l: '하트'}, {v: 'cloud', l: '구름'}].map(s => <option key={s.v} value={s.v}>{s.l}</option>)}
+                                                </select>
+                                            </div>
+                                        );
+                                        if (typeof value === 'boolean') return (
+                                            <div key={key} className="flex justify-between items-center py-2 border-t border-gray-50 mt-1 pt-3">
+                                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{paramLabels[key] || key}</span>
+                                                <input type="checkbox" checked={value} onChange={(e) => handleParamChange(key, e.target.checked)} className="accent-blue-500" />
+                                            </div>
+                                        );
+                                        return null;
+                                    })}
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div className="w-full lg:w-[30%] bg-white overflow-y-auto p-8 border-l pb-32">
-                        <h2 className="text-xl font-black mb-6">Theme Collection</h2>
-                        <div className="grid grid-cols-5 gap-2">
-                            {allThemes.map((t, idx) => (
-                                <button key={idx} onClick={() => setSelectedTheme(t)} className={`aspect-square rounded-lg transition-all ${selectedTheme.color === t.color ? 'ring-2 ring-blue-500 scale-110 z-10 shadow-lg' : 'border border-gray-100'}`} style={{ backgroundColor: t.color }}>
-                                    {selectedTheme.color === t.color && <Icon name="Check" size={12} color={t.text} className="mx-auto" />}
+
+                    {/* Right Column: Unified Assets Library with Tabs (35%) */}
+                    <div className="w-full lg:w-[35%] bg-white flex flex-col h-[35%] lg:h-full border-l border-gray-100 shadow-xl lg:shadow-none z-20">
+                        
+                        {/* Tab Navigation Header */}
+                        <div className="p-5 lg:p-6 pb-4 border-b border-gray-100 flex-shrink-0 bg-white">
+                            <h2 className="text-lg font-black mb-4 tracking-tight flex items-center gap-2"><Icon name="Library" size={20} color="#64748b"/> Assets Library</h2>
+                            <div className="flex gap-2 p-1.5 bg-gray-100/80 rounded-2xl">
+                                <button onClick={() => setActiveTab('colors')} 
+                                    className={`flex-1 py-2.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all flex justify-center items-center gap-2 ${activeTab === 'colors' ? 'bg-white shadow-sm text-blue-600 ring-1 ring-black/5' : 'text-gray-400 hover:text-gray-600'}`}>
+                                    <Icon name="Palette" size={14} /> Colors
                                 </button>
-                            ))}
+                                <button onClick={() => setActiveTab('patterns')} 
+                                    className={`flex-1 py-2.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all flex justify-center items-center gap-2 ${activeTab === 'patterns' ? 'bg-white shadow-sm text-blue-600 ring-1 ring-black/5' : 'text-gray-400 hover:text-gray-600'}`}>
+                                    <Icon name="Box" size={14} /> Patterns
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Scrollable Tab Content */}
+                        <div className="flex-1 overflow-y-auto p-5 lg:p-6 custom-scrollbar pb-32">
+                            
+                            {/* Tab 1: COLORS */}
+                            {activeTab === 'colors' && (
+                                <div className="space-y-10 animate-in fade-in duration-300">
+                                    {Object.entries(THEME_COLORS_FULL).map(([catId, hexCodes]) => (
+                                        <section key={catId}>
+                                            <div className={`flex items-center gap-2 mb-4 font-black text-[10px] uppercase tracking-widest ${CATEGORIES_DATA[catId].color}`}>
+                                                <div className="bg-current bg-opacity-10 p-1.5 rounded-lg"><Icon name={CATEGORIES_DATA[catId].icon} size={14} /></div>
+                                                {CATEGORIES_DATA[catId].label}
+                                                <div className="flex-1 h-px bg-gray-100 ml-2"></div>
+                                            </div>
+                                            <div className="grid grid-cols-6 sm:grid-cols-8 lg:grid-cols-5 gap-2 lg:gap-2.5">
+                                                {hexCodes.map((hex, idx) => {
+                                                    const isActive = selectedTheme.color === hex;
+                                                    const colorInfo = calculateOverlayColor(hex);
+                                                    return (
+                                                        <button key={idx} onClick={() => setSelectedTheme({ color: hex, text: colorInfo.luma > 0.6 ? "#333333" : "#FFFFFF", category: catId, name: `Theme ${hex}` })} 
+                                                            className={`aspect-square rounded-xl transition-all duration-300 hover:scale-110 active:scale-95 border ${isActive ? 'ring-2 ring-offset-2 ring-blue-500 scale-105 z-10 shadow-lg border-transparent' : 'border-gray-100 hover:shadow-md'}`}
+                                                            style={{ backgroundColor: hex }}>
+                                                            {isActive && <Icon name="Check" size={14} color={colorInfo.luma > 0.6 ? "#333333" : "#FFFFFF"} className="mx-auto drop-shadow-md" />}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </section>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Tab 2: PATTERNS */}
+                            {activeTab === 'patterns' && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4 animate-in fade-in duration-300">
+                                    {patterns.map((pat, idx) => {
+                                        const isActive = selectedPatternBase.name === pat.name;
+                                        const isCopied = copyStatus === pat.name;
+                                        return (
+                                            <div key={idx} onClick={() => setSelectedPatternBase(pat)} className={`group p-5 rounded-[28px] border cursor-pointer transition-all duration-300 flex flex-col relative ${isActive ? 'border-blue-500 bg-blue-50/30 ring-4 ring-blue-50 shadow-md' : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'}`}>
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <span className="font-black uppercase tracking-tighter text-sm flex items-center gap-2">
+                                                        <Icon name="Wand2" size={16} color={isActive ? '#3b82f6' : '#94a3b8'} />
+                                                        {pat.name} {pat.isCustomized && <span className="text-[9px] text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full ml-1 font-black tracking-widest">MOD</span>}
+                                                    </span>
+                                                    <button onClick={(e) => { e.stopPropagation(); copyToClipboard(pat.params, pat.name); }} className={`p-2 rounded-xl transition-all ${isCopied ? 'bg-emerald-500 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-blue-600 shadow-sm'}`}>
+                                                        <Icon name={isCopied ? 'Check' : 'Copy'} size={14} />
+                                                    </button>
+                                                </div>
+                                                <div className={`text-[10px] font-mono p-4 rounded-2xl overflow-x-auto custom-scrollbar leading-relaxed border ${isActive ? 'bg-white text-blue-900 border-blue-100 shadow-inner' : 'bg-gray-50 text-gray-500 border-transparent'}`}>
+                                                    <div className="opacity-40 font-bold mb-1">params: {'{'}</div>
+                                                    {Object.entries(pat.params).map(([k,v]) => <div key={k} className="pl-4 whitespace-nowrap"><span className={isActive ? 'text-blue-600' : 'text-gray-700 font-bold'}>'{k}'</span>: {formatValueForCopy(v)},</div>)}
+                                                    <div className="opacity-40 font-bold mt-1">{'}'}</div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
                         </div>
                     </div>
                 </div>
