@@ -50,14 +50,52 @@
         };
 
         const initialPatterns = [
-            { type: 'shape', name: '해바라기 나선 (Phyllotaxis)', params: { distribution: 'phyllotaxis', shape: 'circle', count: 300, phySpread: 12, minSize: 4.0, maxSize: 20.0, opacity: 0.35, blur: 0 } },
-            { type: 'shape', name: '만다라 대칭 (Symmetry)', params: { distribution: 'symmetry', shape: 'diamond', rings: 5, symmetry: 8, spread: 35, minSize: 10.0, maxSize: 30.0, opacity: 0.3, blur: 0 } },
-            { type: 'shape', name: '중력 성단 (Clusters)', params: { distribution: 'cluster', shape: 'star', points: 5, count: 180, clusterCount: 4, spread: 90, minSize: 8.0, maxSize: 36.0, opacity: 0.4, blur: 1 } },
-            { type: 'shape', name: '푸아송 산포 (Poisson)', params: { distribution: 'poisson', shape: 'circle', count: 120, minDistance: 25, minSize: 8.0, maxSize: 30.0, blur: 0, opacity: 0.3 } },
-            { type: 'shape', name: '노이즈 군집 (Noise Map)', params: { distribution: 'noise', shape: 'cloud', count: 150, noiseScale: 0.015, noiseThreshold: 0.45, minSize: 20.0, maxSize: 70.0, opacity: 0.25, blur: 0 } },
-            { type: 'shape', name: '은하수 궤적 (Path)', params: { distribution: 'path', shape: 'star', points: 5, pathType: 'spiral', spread: 60, count: 80, minSize: 16.0, maxSize: 50.0, blur: 2, opacity: 0.4 } },
-            { type: 'shape', name: '흔들린 타일 (Jitter Grid)', params: { distribution: 'grid', shape: 'rectangle', cornerRadius: 4.0, count: 50, cols: 8, rows: 4, posJitter: 0.6, sizeJitter: 0.5, minSize: 40.0, maxSize: 50.0, opacity: 0.2, blur: 0 } },
-            { type: 'wave', name: '기본 물결 (Wave)', params: { waveCount: 4, frequency: 1.2, amplitude: 25.0, curvature: 0.3, blur: 0, opacity: 0.15, yOffset: 0 } },
+            // 🌟 다중 레이어(Multi-Layer)가 적용된 강력한 프리셋들
+            {
+                name: '우주 은하수 (Galaxy Burst)',
+                layers: [
+                    { type: 'wave', waveCount: 2, frequency: 0.8, amplitude: 60.0, curvature: 0.5, blendMode: 'overlay', opacity: 0.2, blur: 15, yOffset: 0 },
+                    { type: 'shape', distribution: 'path', blendMode: 'screen', shape: ['star', 'sparkle'], pathType: 'spiral', spread: 80, count: 150, points: 5, minSize: 5.0, maxSize: 30.0, opacity: 0.5, blur: 1 },
+                    { type: 'shape', distribution: 'cluster', blendMode: 'lighter', shape: ['circle'], clusterCount: 3, spread: 60, count: 200, minSize: 2.0, maxSize: 8.0, opacity: 0.3, blur: 2 }
+                ]
+            },
+            {
+                name: '심해 보케 (Deep Bokeh)',
+                layers: [
+                    { type: 'shape', distribution: 'poisson', blendMode: 'screen', shape: ['circle'], count: 80, minDistance: 30, minSize: 20.0, maxSize: 80.0, opacity: 0.1, blur: 8 },
+                    { type: 'shape', distribution: 'noise', blendMode: 'lighter', shape: ['shimmer', 'circle'], count: 120, noiseScale: 0.015, noiseThreshold: 0.5, minSize: 5.0, maxSize: 25.0, opacity: 0.3, blur: 2 }
+                ]
+            },
+            {
+                name: '햇빛 반사 (Sunlight)',
+                layers: [
+                    { type: 'shape', distribution: 'noise', blendMode: 'screen', shape: ['shimmer', 'sparkle'], count: 180, noiseScale: 0.02, noiseThreshold: 0.35, minSize: 15.0, maxSize: 60.0, opacity: 0.15, blur: 1 }
+                ]
+            },
+            {
+                name: '마법의 숲 (Magic Forest)',
+                layers: [
+                    { type: 'shape', distribution: 'poisson', blendMode: 'source-over', shape: ['leaf', 'drop', 'sparkle'], count: 150, minDistance: 20, minSize: 10.0, maxSize: 25.0, opacity: 0.35, blur: 0 }
+                ]
+            },
+            {
+                name: '파티 컨페티 (Confetti)',
+                layers: [
+                    { type: 'shape', distribution: 'grid', blendMode: 'source-over', shape: ['circle', 'triangle', 'rectangle'], count: 80, cols: 10, rows: 5, posJitter: 0.8, sizeJitter: 0.6, minSize: 10.0, maxSize: 20.0, cornerRadius: 2.0, opacity: 0.4, blur: 0 }
+                ]
+            },
+            {
+                name: '해바라기 나선 (Phyllotaxis)',
+                layers: [
+                    { type: 'shape', distribution: 'phyllotaxis', blendMode: 'source-over', shape: ['circle'], count: 300, phySpread: 12, minSize: 4.0, maxSize: 20.0, opacity: 0.35, blur: 0 }
+                ]
+            },
+            {
+                name: '기본 물결 (Wave)',
+                layers: [
+                    { type: 'wave', waveCount: 4, frequency: 1.2, amplitude: 25.0, curvature: 0.3, blendMode: 'source-over', opacity: 0.15, blur: 0, yOffset: 0 }
+                ]
+            }
         ];
 
         // -----------------------------------------------------------------------------
@@ -107,7 +145,6 @@
         const DistributionEngine = {
             generate: (distType, count, width, height, params, random) => {
                 const points = [];
-
                 if (distType === 'poisson') {
                     const minDist = params.minDistance || 25;
                     const maxAttempts = count * 10;
@@ -181,7 +218,7 @@
                     const rings = params.rings || 5;
                     const sym = params.symmetry || 8;
                     const ringSpacing = params.spread || 40;
-                    points.push({x: width/2, y: height/2, scale: 1.0}); // 정중앙
+                    points.push({x: width/2, y: height/2, scale: 1.0});
                     for(let r=1; r<=rings; r++) {
                         let radius = r * ringSpacing;
                         let ringPoints = sym * r; 
@@ -205,7 +242,7 @@
                         points.push({ x: center.x + Math.cos(angle)*dist, y: center.y + Math.sin(angle)*dist, scale: Math.max(0.2, 1.0 - (dist/cSpread)*0.6) });
                     }
                 }
-                else { // random / 9-grid fallback
+                else {
                     let weights = params.gridWeights || [1, 1, 1, 1, 1, 1, 1, 1, 1];
                     const totalW = weights.reduce((sum, w) => sum + w, 0);
                     for(let i=0; i<count; i++) {
@@ -275,8 +312,9 @@
             }
         };
 
-        const PatternCanvas = ({ theme, pattern, engineRule, width, height }) => {
+        const PatternCanvas = ({ theme, layers, engineRule, width, height }) => {
             const canvasRef = useRef(null);
+            
             useEffect(() => {
                 const canvas = canvasRef.current;
                 if (!canvas) return;
@@ -284,7 +322,6 @@
                 const dpr = window.devicePixelRatio || 1;
                 canvas.width = width * dpr; canvas.height = height * dpr;
                 ctx.scale(dpr, dpr); ctx.clearRect(0, 0, width, height);
-                const { type, params } = pattern;
                 
                 const drawColor = (elementOpacity) => {
                     const finalAlpha = engineRule.a * elementOpacity;
@@ -292,120 +329,132 @@
                     return `hsla(${engineRule.h}, ${engineRule.s}%, ${engineRule.l}%, ${finalAlpha})`;
                 };
                 
-                let seed = 123;
-                const random = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
-                ctx.filter = `blur(${params.blur || 0}px)`;
-
-                if (type === 'wave') {
-                    const waveCount = params.waveCount || 3;
-                    const amplitude = params.amplitude || 10;
-                    const frequency = params.frequency || 1;
-                    const curvature = params.curvature || 0;
-                    for (let i = 0; i < waveCount; i++) {
-                        ctx.beginPath();
-                        const baseY = height * (0.3 + i * 0.15 + (params.yOffset||0));
-                        ctx.moveTo(0, baseY);
-                        for (let x = 0; x <= width + 5; x += 5) {
-                            const nx = x / width;
-                            const distortedNx = nx + (curvature * 0.3) * Math.sin(nx * Math.PI * 2);
-                            const y = baseY + Math.sin(distortedNx * Math.PI * 2 * frequency) * amplitude;
-                            ctx.lineTo(x, y);
-                        }
-                        ctx.lineTo(width, height); ctx.lineTo(0, height);
-                        const g = ctx.createLinearGradient(0, 0, 0, height); 
-                        g.addColorStop(0, drawColor(0)); g.addColorStop(1, drawColor(params.opacity || 0.2));
-                        ctx.fillStyle = g; ctx.fill();
-                    }
-                    return;
-                }
-
-                // 🌟 All non-wave patterns use the unified Distribution Engine
-                const dist = params.distribution || 'random';
-                const count = params.count || 10;
-                const points = DistributionEngine.generate(dist, count, width, height, params, random);
-                const shapeType = params.shape || 'circle';
-
-                for (let p of points) {
-                    const minS = params.minSize || 10; 
-                    const maxS = params.maxSize || 20;
-                    const s = (minS + random() * (maxS - minS)) * p.scale;
+                // 🌟 순차적으로 레이어를 겹쳐서 렌더링
+                layers.forEach((layer, index) => {
+                    // 각 레이어마다 고유의 시드값을 주어 서로 렌더링에 간섭하지 않게 함
+                    let seed = 123 + (index * 1000);
+                    const random = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
                     
-                    ctx.save(); 
-                    ctx.translate(p.x, p.y); 
-                    ctx.rotate(random() * Math.PI * 2); 
-                    ctx.fillStyle = drawColor(params.opacity || 0.2);
-                    ctx.beginPath();
+                    ctx.save();
+                    ctx.globalCompositeOperation = layer.blendMode || 'source-over';
+                    ctx.filter = `blur(${layer.blur || 0}px)`;
 
-                    if(shapeType === 'circle') {
-                        ctx.arc(0, 0, s/2, 0, Math.PI*2);
-                    } else if(shapeType === 'rectangle') {
-                        if (params.cornerRadius > 0) ctx.roundRect(-s/2, -s/2, s, s, params.cornerRadius * p.scale);
-                        else ctx.rect(-s/2, -s/2, s, s);
-                    } else if(shapeType === 'star') {
-                        const pts = params.points || 5;
-                        ctx.moveTo(0, -s/2);
-                        for (let j = 0; j < pts * 2; j++) {
-                            const r = j % 2 === 0 ? s/2 : (s/2) * 0.4; const a = (j * Math.PI / pts) - Math.PI/2;
-                            ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
+                    if (layer.type === 'wave') {
+                        const waveCount = layer.waveCount || 3;
+                        const amplitude = layer.amplitude || 10;
+                        const frequency = layer.frequency || 1;
+                        const curvature = layer.curvature || 0;
+                        for (let i = 0; i < waveCount; i++) {
+                            ctx.beginPath();
+                            const baseY = height * (0.3 + i * 0.15 + (layer.yOffset||0));
+                            ctx.moveTo(0, baseY);
+                            for (let x = 0; x <= width + 5; x += 5) {
+                                const nx = x / width;
+                                const distortedNx = nx + (curvature * 0.3) * Math.sin(nx * Math.PI * 2);
+                                const y = baseY + Math.sin(distortedNx * Math.PI * 2 * frequency) * amplitude;
+                                ctx.lineTo(x, y);
+                            }
+                            ctx.lineTo(width, height); ctx.lineTo(0, height);
+                            const g = ctx.createLinearGradient(0, 0, 0, height); 
+                            g.addColorStop(0, drawColor(0)); g.addColorStop(1, drawColor(layer.opacity || 0.2));
+                            ctx.fillStyle = g; ctx.fill();
                         }
-                    } else if(shapeType === 'heart') {
-                        // 🌟 수정: 첨부해주신 완벽한 비율의 스탠다드 "클래식 하트"
-                        ctx.moveTo(0, -s * 0.2);
-                        ctx.bezierCurveTo(s * 0.55, -s * 0.6, s * 0.55, s * 0.1, 0, s * 0.45);
-                        ctx.bezierCurveTo(-s * 0.55, s * 0.1, -s * 0.55, -s * 0.6, 0, -s * 0.2);
-                    } else if(shapeType === 'heart_outline') {
-                        // 🌟 신규: 두 번째 이미지 형태의 "라인 하트" (속이 뚫린 형태)
-                        ctx.moveTo(0, -s * 0.2);
-                        ctx.bezierCurveTo(s * 0.55, -s * 0.6, s * 0.55, s * 0.1, 0, s * 0.45);
-                        ctx.bezierCurveTo(-s * 0.55, s * 0.1, -s * 0.55, -s * 0.6, 0, -s * 0.2);
-                        
-                        // 구멍 뚫기 (역방향 패스 그리기)
-                        const ins = s * 0.7; // 두께 조절 (70% 크기)
-                        const yOff = -s * 0.05; // 중심 위치 보정
-                        ctx.moveTo(0, ins * 0.45 + yOff);
-                        ctx.bezierCurveTo(ins * 0.55, ins * 0.1 + yOff, ins * 0.55, -ins * 0.6 + yOff, 0, -ins * 0.2 + yOff);
-                        ctx.bezierCurveTo(-ins * 0.55, -ins * 0.6 + yOff, -ins * 0.55, ins * 0.1 + yOff, 0, ins * 0.45 + yOff);
-                    } else if(shapeType === 'heart_slim') {
-                        // 🌟 수정: 위아래로 뾰족한 얄쌍한 핏의 하트
-                        ctx.moveTo(0, -s * 0.2);
-                        ctx.bezierCurveTo(s * 0.4, -s * 0.6, s * 0.45, s * 0.1, 0, s * 0.6);
-                        ctx.bezierCurveTo(-s * 0.45, s * 0.1, -s * 0.4, -s * 0.6, 0, -s * 0.2);
-                    } else if(shapeType === 'heart_wide') {
-                        // 🌟 수정: 양옆으로 둥글게 꽉 찬 느낌의 통통 하트
-                        ctx.moveTo(0, -s * 0.2);
-                        ctx.bezierCurveTo(s * 0.8, -s * 0.6, s * 0.9, s * 0.1, 0, s * 0.45);
-                        ctx.bezierCurveTo(-s * 0.9, s * 0.1, -s * 0.8, -s * 0.6, 0, -s * 0.2);
-                    } else if(shapeType === 'cloud') {
-                        ctx.arc(-s/6, 0, s/6, 0, Math.PI*2); ctx.arc(s/6, 0, s/6, 0, Math.PI*2); ctx.arc(0, -s/8, s/5, 0, Math.PI*2);
-                    } else if(shapeType === 'triangle') {
-                        ctx.moveTo(0, -s/2); ctx.lineTo(s/2, s/2); ctx.lineTo(-s/2, s/2);
-                    } else if(shapeType === 'hexagon') {
-                        for (let j = 0; j < 6; j++) { const a = j * Math.PI / 3; ctx.lineTo(s/2 * Math.cos(a), s/2 * Math.sin(a)); }
-                    } else if(shapeType === 'diamond') {
-                        ctx.moveTo(0, -s/2); ctx.lineTo(s/2, 0); ctx.lineTo(0, s/2); ctx.lineTo(-s/2, 0);
-                    } else if(shapeType === 'sparkle') {
-                        ctx.moveTo(0, -s/2);
-                        ctx.quadraticCurveTo(s/8, -s/8, s/2, 0);
-                        ctx.quadraticCurveTo(s/8, s/8, 0, s/2);
-                        ctx.quadraticCurveTo(-s/8, s/8, -s/2, 0);
-                        ctx.quadraticCurveTo(-s/8, -s/8, 0, -s/2);
-                    } else if(shapeType === 'leaf') {
-                        ctx.moveTo(0, -s/2);
-                        ctx.bezierCurveTo(s/2, -s/4, s/2, s/4, 0, s/2);
-                        ctx.bezierCurveTo(-s/2, s/4, -s/2, -s/4, 0, -s/2);
-                    } else if(shapeType === 'drop') {
-                        ctx.moveTo(0, -s/2);
-                        ctx.bezierCurveTo(s/2, -s/8, s/2, s/2, 0, s/2);
-                        ctx.bezierCurveTo(-s/2, s/2, -s/2, -s/8, 0, -s/2);
                     } else {
-                        ctx.arc(0, 0, s/2, 0, Math.PI*2);
-                    }
-                    ctx.closePath();
-                    ctx.fill(); 
-                    ctx.restore();
-                }
+                        // Shape Distribution
+                        const dist = layer.distribution || 'random';
+                        const count = layer.count || 10;
+                        const points = DistributionEngine.generate(dist, count, width, height, layer, random);
+                        const shapePool = Array.isArray(layer.shape) ? layer.shape : [layer.shape || 'circle'];
 
-            }, [theme, pattern, engineRule, width, height]);
+                        for (let p of points) {
+                            const minS = layer.minSize || 10; 
+                            const maxS = layer.maxSize || 20;
+                            const s = (minS + random() * (maxS - minS)) * p.scale;
+                            const currentShape = shapePool[Math.floor(random() * shapePool.length)];
+                            
+                            ctx.save(); 
+                            ctx.translate(p.x, p.y); 
+                            ctx.rotate(random() * Math.PI * 2); 
+                            
+                            if(currentShape === 'shimmer') {
+                                ctx.fillStyle = drawColor(layer.opacity || 0.2);
+                                ctx.fillRect(-s/2, -s/2, s, s);
+                                ctx.beginPath();
+                                ctx.fillStyle = drawColor((layer.opacity || 0.2) * 1.8);
+                                ctx.rotate(Math.PI / 4);
+                                const ins = s * 0.7;
+                                ctx.rect(-ins/2, -ins/2, ins, ins);
+                                ctx.fill();
+                            } else {
+                                ctx.fillStyle = drawColor(layer.opacity || 0.2);
+                                ctx.beginPath();
+                                if(currentShape === 'circle') {
+                                    ctx.arc(0, 0, s/2, 0, Math.PI*2);
+                                } else if(currentShape === 'rectangle') {
+                                    if (layer.cornerRadius > 0) ctx.roundRect(-s/2, -s/2, s, s, layer.cornerRadius * p.scale);
+                                    else ctx.rect(-s/2, -s/2, s, s);
+                                } else if(currentShape === 'star') {
+                                    const pts = layer.points || 5;
+                                    ctx.moveTo(0, -s/2);
+                                    for (let j = 0; j < pts * 2; j++) {
+                                        const r = j % 2 === 0 ? s/2 : (s/2) * 0.4; const a = (j * Math.PI / pts) - Math.PI/2;
+                                        ctx.lineTo(r * Math.cos(a), r * Math.sin(a));
+                                    }
+                                } else if(currentShape === 'heart') {
+                                    ctx.moveTo(0, -s * 0.2);
+                                    ctx.bezierCurveTo(s * 0.55, -s * 0.6, s * 0.55, s * 0.1, 0, s * 0.45);
+                                    ctx.bezierCurveTo(-s * 0.55, s * 0.1, -s * 0.55, -s * 0.6, 0, -s * 0.2);
+                                } else if(currentShape === 'heart_outline') {
+                                    ctx.moveTo(0, -s * 0.2);
+                                    ctx.bezierCurveTo(s * 0.55, -s * 0.6, s * 0.55, s * 0.1, 0, s * 0.45);
+                                    ctx.bezierCurveTo(-s * 0.55, s * 0.1, -s * 0.55, -s * 0.6, 0, -s * 0.2);
+                                    const ins = s * 0.7; const yOff = -s * 0.05;
+                                    ctx.moveTo(0, ins * 0.45 + yOff);
+                                    ctx.bezierCurveTo(ins * 0.55, ins * 0.1 + yOff, ins * 0.55, -ins * 0.6 + yOff, 0, -ins * 0.2 + yOff);
+                                    ctx.bezierCurveTo(-ins * 0.55, -ins * 0.6 + yOff, -ins * 0.55, ins * 0.1 + yOff, 0, ins * 0.45 + yOff);
+                                } else if(currentShape === 'heart_slim') {
+                                    ctx.moveTo(0, -s * 0.2);
+                                    ctx.bezierCurveTo(s * 0.4, -s * 0.6, s * 0.45, s * 0.1, 0, s * 0.6);
+                                    ctx.bezierCurveTo(-s * 0.45, s * 0.1, -s * 0.4, -s * 0.6, 0, -s * 0.2);
+                                } else if(currentShape === 'heart_wide') {
+                                    ctx.moveTo(0, -s * 0.2);
+                                    ctx.bezierCurveTo(s * 0.8, -s * 0.6, s * 0.9, s * 0.1, 0, s * 0.45);
+                                    ctx.bezierCurveTo(-s * 0.9, s * 0.1, -s * 0.8, -s * 0.6, 0, -s * 0.2);
+                                } else if(currentShape === 'cloud') {
+                                    ctx.arc(-s/6, 0, s/6, 0, Math.PI*2); ctx.arc(s/6, 0, s/6, 0, Math.PI*2); ctx.arc(0, -s/8, s/5, 0, Math.PI*2);
+                                } else if(currentShape === 'triangle') {
+                                    ctx.moveTo(0, -s/2); ctx.lineTo(s/2, s/2); ctx.lineTo(-s/2, s/2);
+                                } else if(currentShape === 'hexagon') {
+                                    for (let j = 0; j < 6; j++) { const a = j * Math.PI / 3; ctx.lineTo(s/2 * Math.cos(a), s/2 * Math.sin(a)); }
+                                } else if(currentShape === 'diamond') {
+                                    ctx.moveTo(0, -s/2); ctx.lineTo(s/2, 0); ctx.lineTo(0, s/2); ctx.lineTo(-s/2, 0);
+                                } else if(currentShape === 'sparkle') {
+                                    ctx.moveTo(0, -s/2);
+                                    ctx.quadraticCurveTo(s/8, -s/8, s/2, 0);
+                                    ctx.quadraticCurveTo(s/8, s/8, 0, s/2);
+                                    ctx.quadraticCurveTo(-s/8, s/8, -s/2, 0);
+                                    ctx.quadraticCurveTo(-s/8, -s/8, 0, -s/2);
+                                } else if(currentShape === 'leaf') {
+                                    ctx.moveTo(0, -s/2);
+                                    ctx.bezierCurveTo(s/2, -s/4, s/2, s/4, 0, s/2);
+                                    ctx.bezierCurveTo(-s/2, s/4, -s/2, -s/4, 0, -s/2);
+                                } else if(currentShape === 'drop') {
+                                    ctx.moveTo(0, -s/2);
+                                    ctx.bezierCurveTo(s/2, -s/8, s/2, s/2, 0, s/2);
+                                    ctx.bezierCurveTo(-s/2, s/2, -s/2, -s/8, 0, -s/2);
+                                } else {
+                                    ctx.arc(0, 0, s/2, 0, Math.PI*2);
+                                }
+                                ctx.closePath();
+                                ctx.fill(); 
+                            }
+                            ctx.restore();
+                        }
+                    }
+                    ctx.restore();
+                });
+
+            }, [theme, layers, engineRule, width, height]);
             return <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} className="block" />;
         };
 
@@ -415,52 +464,101 @@
         const App = () => {
             const [patterns, setPatterns] = useState(initialPatterns);
             const [selectedTheme, setSelectedTheme] = useState({ color: "#212121", text: "#FFFFFF", category: "neutralTones", name: "Charcoal" });
+            
+            // 🌟 다중 레이어 관리를 위한 State
             const [selectedPatternBase, setSelectedPatternBase] = useState(patterns[0]);
-            const [patternParams, setPatternParams] = useState(patterns[0].params);
+            const [layers, setLayers] = useState(patterns[0].layers);
+            const [activeLayerIndex, setActiveLayerIndex] = useState(0);
+            
             const [copyStatus, setCopyStatus] = useState(null);
             
             const [mobileTab, setMobileTab] = useState('editor'); 
             const [desktopTab, setDesktopTab] = useState('patterns'); 
 
-            useEffect(() => { setPatternParams(selectedPatternBase.params); }, [selectedPatternBase]);
+            useEffect(() => { 
+                setLayers(selectedPatternBase.layers); 
+                setActiveLayerIndex(0);
+            }, [selectedPatternBase]);
 
-            const handleDistributionChange = (newDist) => {
-                const newParams = { ...patternParams, distribution: newDist };
-                if (newDist === 'poisson' && newParams.minDistance === undefined) newParams.minDistance = 25;
-                if (newDist === 'noise' && newParams.noiseScale === undefined) { newParams.noiseScale = 0.015; newParams.noiseThreshold = 0.45; }
-                if (newDist === 'path' && newParams.pathType === undefined) { newParams.pathType = 'spiral'; newParams.spread = 60; }
-                if (newDist === 'grid' && newParams.cols === undefined) { newParams.cols = 8; newParams.rows = 4; newParams.posJitter = 0.6; newParams.sizeJitter = 0.5; }
-                if (newDist === 'random' && newParams.gridWeights === undefined) { newParams.gridWeights = [1,1,1,1,1,1,1,1,1]; newParams.flowScale = {dir: 'NONE', range: [1,1]}; }
-                if (newDist === 'phyllotaxis' && newParams.phySpread === undefined) newParams.phySpread = 12;
-                if (newDist === 'symmetry' && newParams.rings === undefined) { newParams.rings = 5; newParams.symmetry = 8; newParams.spread = 35; }
-                if (newDist === 'cluster' && newParams.clusterCount === undefined) { newParams.clusterCount = 4; newParams.spread = 90; }
-                setPatternParams(newParams);
+            const activeLayer = layers[activeLayerIndex] || layers[0];
+
+            // 🌟 레이어 값 업데이트
+            const handleParamChange = (key, value) => { 
+                setLayers(prev => prev.map((l, i) => i === activeLayerIndex ? { ...l, [key]: value } : l));
             };
 
-            const handleShapeChange = (newShape) => {
-                const newParams = { ...patternParams, shape: newShape };
-                if (newShape === 'star' && newParams.points === undefined) newParams.points = 5;
-                if (newShape === 'rectangle' && newParams.cornerRadius === undefined) newParams.cornerRadius = 4;
-                setPatternParams(newParams);
+            // 🌟 타입/배치 방식 통합 변경 핸들러
+            const handleTypeChange = (newTypeVal) => {
+                let newLayer = { ...activeLayer };
+                if (newTypeVal === 'wave') {
+                    newLayer = { type: 'wave', waveCount: 4, frequency: 1.2, amplitude: 25.0, curvature: 0.3, blendMode: 'source-over', opacity: 0.15, blur: 0, yOffset: 0 };
+                } else {
+                    const dist = newTypeVal;
+                    newLayer.type = 'shape';
+                    newLayer.distribution = dist;
+                    // Inject specific defaults for the chosen distribution
+                    if (dist === 'poisson' && newLayer.minDistance === undefined) newLayer.minDistance = 25;
+                    if (dist === 'noise' && newLayer.noiseScale === undefined) { newLayer.noiseScale = 0.015; newLayer.noiseThreshold = 0.45; }
+                    if (dist === 'path' && newLayer.pathType === undefined) { newLayer.pathType = 'spiral'; newLayer.spread = 60; }
+                    if (dist === 'grid' && newLayer.cols === undefined) { newLayer.cols = 8; newLayer.rows = 4; newLayer.posJitter = 0.6; newLayer.sizeJitter = 0.5; }
+                    if (dist === 'random' && newLayer.gridWeights === undefined) { newLayer.gridWeights = [1,1,1,1,1,1,1,1,1]; newLayer.flowScale = {dir: 'NONE', range: [1,1]}; }
+                    if (dist === 'phyllotaxis' && newLayer.phySpread === undefined) newLayer.phySpread = 12;
+                    if (dist === 'symmetry' && newLayer.rings === undefined) { newLayer.rings = 5; newLayer.symmetry = 8; newLayer.spread = 35; }
+                    if (dist === 'cluster' && newLayer.clusterCount === undefined) { newLayer.clusterCount = 4; newLayer.spread = 90; }
+                }
+                setLayers(prev => prev.map((l, i) => i === activeLayerIndex ? newLayer : l));
             };
 
-            const handleParamChange = (key, value) => { setPatternParams(prev => ({ ...prev, [key]: value })); };
+            // 🌟 다중 도형 토글
+            const handleShapeToggle = (shapeId) => {
+                let currentShapes = Array.isArray(activeLayer.shape) ? [...activeLayer.shape] : [activeLayer.shape || 'circle'];
+                if (currentShapes.includes(shapeId)) {
+                    if (currentShapes.length > 1) currentShapes = currentShapes.filter(s => s !== shapeId);
+                } else {
+                    currentShapes.push(shapeId);
+                }
+                const newParams = { ...activeLayer, shape: currentShapes };
+                if (currentShapes.includes('star') && newParams.points === undefined) newParams.points = 5;
+                if (currentShapes.includes('rectangle') && newParams.cornerRadius === undefined) newParams.cornerRadius = 4;
+                handleParamChange('shape', currentShapes);
+            };
+
+            // 🌟 레이어 추가/삭제
+            const addLayer = () => {
+                const newLayer = { type: 'shape', distribution: 'poisson', blendMode: 'source-over', shape: ['circle'], count: 50, minSize: 10, maxSize: 30, opacity: 0.3, blur: 0, minDistance: 30 };
+                setLayers(prev => [...prev, newLayer]);
+                setActiveLayerIndex(layers.length);
+            };
+
+            const removeLayer = (idx) => {
+                if (layers.length <= 1) return;
+                setLayers(prev => prev.filter((_, i) => i !== idx));
+                if (activeLayerIndex >= idx && activeLayerIndex > 0) setActiveLayerIndex(prev => prev - 1);
+            };
+
             const handleSavePattern = () => {
-                const updated = patterns.map(p => p.name === selectedPatternBase.name ? { ...p, params: JSON.parse(JSON.stringify(patternParams)), isCustomized: true } : p);
-                setPatterns(updated); setSelectedPatternBase(prev => ({ ...prev, params: JSON.parse(JSON.stringify(patternParams)), isCustomized: true }));
+                const updated = patterns.map(p => p.name === selectedPatternBase.name ? { ...p, layers: JSON.parse(JSON.stringify(layers)), isCustomized: true } : p);
+                setPatterns(updated); setSelectedPatternBase(prev => ({ ...prev, layers: JSON.parse(JSON.stringify(layers)), isCustomized: true }));
             };
 
             const formatValueForCopy = (v) => {
                 if (typeof v === 'number' && !Number.isInteger(v)) return v.toFixed(3);
                 if (typeof v === 'string') return `'${v}'`;
-                if (Array.isArray(v)) return `[${v.join(', ')}]`;
+                if (Array.isArray(v)) {
+                    if(v.length > 0 && typeof v[0] === 'string') return `[${v.map(s => `'${s}'`).join(', ')}]`;
+                    return `[${v.join(', ')}]`;
+                }
                 if (typeof v === 'object' && v !== null) return `{ ${Object.entries(v).map(([k, val]) => `'${k}': ${formatValueForCopy(val)}`).join(', ')} }`;
                 return v;
             };
 
-            const copyToClipboard = (params, patternName) => {
-                const formatted = Object.entries(params).map(([k, v]) => `      '${k}': ${formatValueForCopy(v)},`).join('\n');
-                const text = `params: {\n${formatted}\n    }`;
+            const copyToClipboard = (layersData, patternName) => {
+                const formattedLayers = layersData.map(layer => {
+                    const paramsStr = Object.entries(layer).map(([k, v]) => `      '${k}': ${formatValueForCopy(v)},`).join('\n');
+                    return `    {\n${paramsStr}\n    }`;
+                }).join(',\n');
+                
+                const text = `layers: [\n${formattedLayers}\n  ]`;
                 const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
                 document.execCommand('copy'); setCopyStatus(patternName); setTimeout(() => setCopyStatus(null), 1500);
                 document.body.removeChild(ta);
@@ -469,8 +567,8 @@
             const engineRule = useMemo(() => calculateOverlayColor(selectedTheme?.color || "#FFFFFF"), [selectedTheme]);
 
             const paramLabels = {
-                distribution: "배치 방식 (Distribution)",
-                shape: "도형 모양 (Shape)",
+                blendMode: "혼합 모드 (Blend Mode)",
+                shape: "도형 모양 (다중 선택 가능)",
                 count: "배치 개수",
                 waveCount: "물결 개수",
                 frequency: "진동수 (파동 횟수)",
@@ -501,10 +599,11 @@
             };
 
             const getVisibleParams = () => {
-                if (selectedPatternBase.type === 'wave') return ['waveCount', 'frequency', 'amplitude', 'curvature', 'yOffset', 'blur', 'opacity'];
+                if (!activeLayer) return [];
+                if (activeLayer.type === 'wave') return ['blendMode', 'waveCount', 'frequency', 'amplitude', 'curvature', 'yOffset', 'blur', 'opacity'];
                 
-                const dist = patternParams.distribution || 'random';
-                const shape = patternParams.shape || 'circle';
+                const dist = activeLayer.distribution || 'random';
+                const currentShapes = Array.isArray(activeLayer.shape) ? activeLayer.shape : [activeLayer.shape || 'circle'];
                 
                 let specifics = [];
                 if (dist === 'poisson') specifics = ['count', 'minDistance'];
@@ -517,14 +616,20 @@
                 else if (dist === 'cluster') specifics = ['count', 'clusterCount', 'spread'];
 
                 let shapeSpecifics = [];
-                if (shape === 'star') shapeSpecifics.push('points');
-                if (shape === 'rectangle') shapeSpecifics.push('cornerRadius');
+                if (currentShapes.includes('star')) shapeSpecifics.push('points');
+                if (currentShapes.includes('rectangle')) shapeSpecifics.push('cornerRadius');
 
-                const orderedKeys = ['distribution', 'shape', ...specifics, 'minSize', 'maxSize', ...shapeSpecifics, 'blur', 'opacity'];
-                return orderedKeys.filter(k => patternParams[k] !== undefined);
+                const orderedKeys = ['blendMode', 'shape', ...specifics, 'minSize', 'maxSize', ...shapeSpecifics, 'blur', 'opacity'];
+                return orderedKeys.filter(k => activeLayer[k] !== undefined);
             };
 
             const visibleKeys = getVisibleParams();
+            const availableShapes = [
+                {v: 'circle', l: '원형'}, {v: 'triangle', l: '삼각형'}, {v: 'hexagon', l: '육각형'}, {v: 'diamond', l: '마름모'}, 
+                {v: 'star', l: '별모양'}, {v: 'shimmer', l: '빛망울'}, {v: 'sparkle', l: '반짝이'}, {v: 'leaf', l: '나뭇잎'}, 
+                {v: 'drop', l: '물방울'}, {v: 'heart', l: '하트(기본)'}, {v: 'heart_outline', l: '하트(라인)'}, 
+                {v: 'heart_slim', l: '하트(슬림)'}, {v: 'heart_wide', l: '하트(통통)'}, {v: 'cloud', l: '구름'}
+            ];
 
             return (
                 <div className="h-screen w-screen flex flex-col lg:flex-row overflow-hidden bg-gray-50 text-gray-800">
@@ -538,14 +643,15 @@
                                     <h1 className="text-xl lg:text-2xl font-black mb-1 text-gray-900 tracking-tight flex items-center gap-2">
                                         <Icon name="Layers" size={22} color="#3b82f6" /> Style Canvas
                                     </h1>
-                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold ml-8">Generative Art v8.1</p>
+                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold ml-8">Layer Composer v1.0</p>
                                 </div>
                             </header>
                             
                             <div className="w-full max-w-[460px]">
                                 <div className="w-full shadow-2xl rounded-[24px] overflow-hidden relative border border-white/60 mb-3" style={{ aspectRatio: '360/185', backgroundColor: selectedTheme.color }}>
                                     <div className="absolute inset-0">
-                                        <PatternCanvas theme={selectedTheme} pattern={{ type: selectedPatternBase.type, params: patternParams }} engineRule={engineRule} width={600} height={600 * (185/360)} />
+                                        {/* 🌟 단일 패턴 대신 layers 배열을 캔버스에 통째로 전달 */}
+                                        <PatternCanvas theme={selectedTheme} layers={layers} engineRule={engineRule} width={600} height={600 * (185/360)} />
                                     </div>
                                     <div className="relative z-10 p-5 h-full flex flex-col justify-between pointer-events-none">
                                         <h2 className="text-xl font-bold tracking-tight drop-shadow-md" style={{ color: selectedTheme.text }}>{selectedTheme.name}</h2>
@@ -573,106 +679,161 @@
                         {/* Editor Area */}
                         <div className={`flex-1 min-h-0 overflow-y-auto p-6 lg:p-8 custom-scrollbar bg-gray-50/30 ${mobileTab === 'editor' ? 'block' : 'hidden'} lg:block`}>
                             <div className="w-full max-w-[500px] mx-auto bg-white p-6 lg:p-7 rounded-[28px] border border-gray-100 shadow-lg flex flex-col mb-10 lg:mb-0">
-                                <div className="flex justify-between items-center mb-6 border-b border-gray-50 pb-4">
-                                    <h3 className="text-sm font-black uppercase flex items-center gap-2 tracking-widest text-gray-800"><Icon name="Sliders" size={16} color="#3b82f6" /> Live Editor</h3>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => copyToClipboard(patternParams, 'EDITOR')} className={`text-[10px] px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1 ${copyStatus === 'EDITOR' ? 'bg-emerald-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                                            <Icon name={copyStatus === 'EDITOR' ? 'Check' : 'Copy'} size={12} /> {copyStatus === 'EDITOR' ? '복사됨' : '복사'}
-                                        </button>
-                                        <button onClick={handleSavePattern} className="text-[10px] px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold flex items-center gap-1 shadow-sm">
-                                            <Icon name="Save" size={12} /> 저장
+                                
+                                {/* 🌟 레이어 관리자 UI */}
+                                <div className="flex flex-col gap-3 mb-6 border-b border-gray-50 pb-5">
+                                    <div className="flex justify-between items-center">
+                                        <h3 className="text-sm font-black uppercase flex items-center gap-2 tracking-widest text-gray-800"><Icon name="Layers" size={16} color="#3b82f6" /> Layer Editor</h3>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => copyToClipboard(layers, 'EDITOR')} className={`text-[10px] px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1 ${copyStatus === 'EDITOR' ? 'bg-emerald-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                                                <Icon name={copyStatus === 'EDITOR' ? 'Check' : 'Copy'} size={12} /> {copyStatus === 'EDITOR' ? '복사됨' : '복사'}
+                                            </button>
+                                            <button onClick={handleSavePattern} className="text-[10px] px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold flex items-center gap-1 shadow-sm">
+                                                <Icon name="Save" size={12} /> 저장
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* 탭 형태의 레이어 선택기 */}
+                                    <div className="flex flex-wrap gap-2 items-center bg-gray-50 p-2 rounded-xl border border-gray-100">
+                                        {layers.map((layer, idx) => (
+                                            <div key={idx} className="relative group">
+                                                <button onClick={() => setActiveLayerIndex(idx)} 
+                                                    className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all ${idx === activeLayerIndex ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-gray-500 hover:bg-gray-100 border border-gray-200'}`}>
+                                                    Layer {idx + 1}
+                                                </button>
+                                                {layers.length > 1 && (
+                                                    <button onClick={(e) => { e.stopPropagation(); removeLayer(idx); }} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+                                                        <Icon name="X" size={10} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                        <button onClick={addLayer} className="px-2 py-1.5 text-[11px] font-bold rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all border border-indigo-100 flex items-center gap-1">
+                                            <Icon name="Plus" size={12} /> Add
                                         </button>
                                     </div>
                                 </div>
 
                                 <div className="flex flex-col gap-4">
-                                    {visibleKeys.map((key) => {
-                                        const value = patternParams[key];
-                                        
-                                        if (key === 'distribution') return (
-                                            <div key={key} className="py-2 mb-2 border-b border-gray-100 pb-5">
-                                                <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider block mb-2">{paramLabels[key]}</span>
-                                                <select value={value || 'random'} onChange={(e) => handleDistributionChange(e.target.value)} className="w-full text-xs font-bold border-2 border-indigo-100 rounded-xl px-3 py-2.5 outline-none bg-indigo-50/50 focus:ring-2 focus:ring-indigo-500 transition-all text-indigo-900 cursor-pointer shadow-sm">
-                                                    <option value="phyllotaxis">🌻 해바라기 나선 (Phyllotaxis)</option>
-                                                    <option value="symmetry">🌸 만다라 대칭 (Radial Symmetry)</option>
-                                                    <option value="cluster">🌌 중력 성단 (Gravity Clusters)</option>
-                                                    <option value="poisson">💧 푸아송 디스크 (자연스러운 산포)</option>
-                                                    <option value="noise">☁️ 노이즈 맵 (구름/군집 형태)</option>
-                                                    <option value="path">☄️ 경로 방사 (흐름과 소용돌이)</option>
-                                                    <option value="grid">🧱 지터드 그리드 (불규칙 타일)</option>
-                                                    <option value="random">🎲 9-그리드 랜덤 (클래식 모드)</option>
+                                    {activeLayer && (
+                                        <>
+                                            {/* 🌟 통합 레이어 종류 & 배치 방식 드롭다운 */}
+                                            <div className="py-2 mb-2 border-b border-gray-100 pb-5">
+                                                <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider block mb-2">레이어 종류 및 배치 방식</span>
+                                                <select value={activeLayer.type === 'wave' ? 'wave' : activeLayer.distribution} onChange={(e) => handleTypeChange(e.target.value)} className="w-full text-xs font-bold border-2 border-indigo-100 rounded-xl px-3 py-2.5 outline-none bg-indigo-50/50 focus:ring-2 focus:ring-indigo-500 transition-all text-indigo-900 cursor-pointer shadow-sm">
+                                                    <optgroup label="곡선 (Curve)">
+                                                        <option value="wave">〰️ 기본 물결 (Wave)</option>
+                                                    </optgroup>
+                                                    <optgroup label="도형 배치 (Shapes)">
+                                                        <option value="phyllotaxis">🌻 해바라기 나선 (Phyllotaxis)</option>
+                                                        <option value="symmetry">🌸 만다라 대칭 (Radial Symmetry)</option>
+                                                        <option value="cluster">🌌 중력 성단 (Gravity Clusters)</option>
+                                                        <option value="poisson">💧 푸아송 디스크 (Poisson)</option>
+                                                        <option value="noise">☁️ 노이즈 맵 (Noise)</option>
+                                                        <option value="path">☄️ 경로 방사 (Path)</option>
+                                                        <option value="grid">🧱 지터드 그리드 (Grid)</option>
+                                                        <option value="random">🎲 9-그리드 랜덤 (Random)</option>
+                                                    </optgroup>
                                                 </select>
                                             </div>
-                                        );
 
-                                        if (key === 'shape') return (
-                                            <div key={key} className="py-2 mb-2 border-b border-gray-100 pb-5">
-                                                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block mb-2">{paramLabels[key]}</span>
-                                                <select value={value} onChange={(e) => handleShapeChange(e.target.value)} className="w-full text-xs font-bold border-2 border-emerald-100 rounded-xl px-3 py-2.5 outline-none bg-emerald-50/50 focus:ring-2 focus:ring-emerald-500 transition-all text-emerald-900 cursor-pointer shadow-sm">
-                                                    {[{v: 'circle', l: '원형 (Circle)'}, {v: 'triangle', l: '삼각형 (Triangle)'}, {v: 'hexagon', l: '육각형 (Hexagon)'}, {v: 'diamond', l: '마름모 (Diamond)'}, {v: 'star', l: '별모양 (Star)'}, {v: 'sparkle', l: '반짝이 (Sparkle)'}, {v: 'leaf', l: '나뭇잎 (Leaf)'}, {v: 'drop', l: '물방울 (Drop)'}, {v: 'heart', l: '클래식 하트 (Classic)'}, {v: 'heart_outline', l: '라인 하트 (Outline)'}, {v: 'heart_slim', l: '슬림 하트 (Slim)'}, {v: 'heart_wide', l: '뚱뚱한 하트 (Chubby)'}, {v: 'cloud', l: '구름 (Cloud)'}].map(s => <option key={s.v} value={s.v}>{s.l}</option>)}
-                                                </select>
-                                            </div>
-                                        );
-                                        
-                                        if (key === 'pathType') return (
-                                            <div key={key} className="flex justify-between items-center py-2 border-t border-gray-50 mt-1 pt-3">
-                                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{paramLabels[key]}</span>
-                                                <select value={value || 'sine'} onChange={(e) => handleParamChange(key, e.target.value)} className="text-[11px] font-bold border border-gray-200 rounded-lg px-2 py-1.5 outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500 transition-all">
-                                                    <option value="sine">사인 곡선 (물결)</option>
-                                                    <option value="spiral">나선형 (소용돌이)</option>
-                                                    <option value="line">직선 (사선)</option>
-                                                </select>
-                                            </div>
-                                        );
+                                            {visibleKeys.map((key) => {
+                                                const value = activeLayer[key];
 
-                                        if (key === 'gridWeights') return (
-                                            <div key={key} className="py-2 border-t border-gray-50">
-                                                <span className="text-[10px] font-bold text-gray-400 block mb-2 uppercase tracking-wider">{paramLabels[key]}</span>
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    {value.map((w, i) => <input key={i} type="number" value={w} onChange={(e) => { const nw = [...value]; nw[i] = parseInt(e.target.value) || 0; handleParamChange(key, nw); }} className="w-full bg-gray-50 border border-gray-200 text-xs text-center font-mono py-2 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" />)}
-                                                </div>
-                                            </div>
-                                        );
-                                        
-                                        if (key === 'flowScale') return (
-                                            <div key={key} className="py-2 border-t border-gray-50 mt-1 pt-4">
-                                                <div className="flex justify-between items-center mb-3">
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{paramLabels[key]}</span>
-                                                    <select value={value.dir} onChange={(e) => handleParamChange(key, { ...value, dir: e.target.value })} className="text-[11px] font-bold border border-gray-200 rounded-lg px-2 py-1.5 outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500 transition-all">
-                                                        {[{v: 'NONE', l: '없음'}, {v: 'TL_BR', l: '좌상 ➔ 우하'}, {v: 'TR_BL', l: '우상 ➔ 좌하'}, {v: 'T_B', l: '위 ➔ 아래'}, {v: 'B_T', l: '아래 ➔ 위'}, {v: 'L_R', l: '좌 ➔ 우'}, {v: 'R_L', l: '우 ➔ 좌'}, {v: 'C_OUT', l: '중앙 ➔ 바깥'}].map(d => <option key={d.v} value={d.v}>{d.l}</option>)}
-                                                    </select>
-                                                </div>
-                                                <div className="flex gap-5">
-                                                    {['시작 크기', '종료 크기'].map((l, idx) => (
-                                                        <div key={l} className="flex-1"><span className="text-[10px] font-bold text-gray-400 block mb-2">{l}: <span className="text-blue-500">{value.range[idx].toFixed(1)}</span></span>
-                                                            <input type="range" min="0" max="4" step="0.1" value={value.range[idx]} onChange={(e) => { const nr = [...value.range]; nr[idx] = parseFloat(e.target.value); handleParamChange(key, { ...value, range: nr }); }} className="w-full h-1.5 accent-blue-500" />
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        );
-                                        
-                                        if (typeof value === 'number') {
-                                            const config = getParamConfig(key);
-                                            const isGenerativeParam = ['minDistance', 'noiseScale', 'noiseThreshold', 'spread', 'phySpread', 'rings', 'symmetry', 'clusterCount', 'cols', 'rows', 'posJitter', 'sizeJitter'].includes(key);
-                                            return (
-                                                <div key={key} className={`py-1.5 border-t border-gray-50 mt-1 pt-3 ${isGenerativeParam ? 'bg-indigo-50/20 -mx-4 px-4 rounded-xl' : ''}`}>
-                                                    <div className={`flex justify-between text-[11px] font-bold mb-2 uppercase tracking-wide ${isGenerativeParam ? 'text-indigo-600' : 'text-gray-700'}`}>
-                                                        <span>{paramLabels[key] || key}</span>
-                                                        <span className={`${isGenerativeParam ? 'text-indigo-700 bg-indigo-100' : 'text-blue-600 bg-blue-50'} px-2 py-0.5 rounded-lg`}>{value.toFixed(config.step < 1 ? 2 : 0)}</span>
+                                                if (key === 'blendMode') return (
+                                                    <div key={key} className="py-2 mb-2 border-b border-gray-100 pb-5">
+                                                        <span className="text-[10px] font-bold text-purple-500 uppercase tracking-wider block mb-2">{paramLabels[key]}</span>
+                                                        <select value={value || 'source-over'} onChange={(e) => handleParamChange(key, e.target.value)} className="w-full text-xs font-bold border-2 border-purple-100 rounded-xl px-3 py-2.5 outline-none bg-purple-50/50 focus:ring-2 focus:ring-purple-500 transition-all text-purple-900 cursor-pointer shadow-sm">
+                                                            <option value="source-over">기본 (Normal)</option>
+                                                            <option value="screen">스크린 (Screen - 빛 반사)</option>
+                                                            <option value="lighter">밝게 (Lighter - 강렬한 빛)</option>
+                                                            <option value="multiply">곱하기 (Multiply - 물감 섞임)</option>
+                                                            <option value="overlay">오버레이 (Overlay - 톤 대비)</option>
+                                                        </select>
                                                     </div>
-                                                    <input type="range" min={config.min} max={config.max} step={config.step} value={value} onChange={(e) => handleParamChange(key, parseFloat(e.target.value))} className={`w-full h-1.5 ${isGenerativeParam ? 'accent-indigo-500' : 'accent-blue-500'}`} />
-                                                </div>
-                                            );
-                                        }
-                                        if (typeof value === 'boolean') return (
-                                            <div key={key} className="flex justify-between items-center py-2 border-t border-gray-50 mt-1 pt-3">
-                                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{paramLabels[key] || key}</span>
-                                                <input type="checkbox" checked={value} onChange={(e) => handleParamChange(key, e.target.checked)} className="accent-blue-500 w-4 h-4" />
-                                            </div>
-                                        );
-                                        return null;
-                                    })}
+                                                );
+
+                                                if (key === 'shape') {
+                                                    const currentShapes = Array.isArray(value) ? value : [value || 'circle'];
+                                                    return (
+                                                        <div key={key} className="py-2 mb-2 border-b border-gray-100 pb-5">
+                                                            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block mb-3">{paramLabels[key]}</span>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {availableShapes.map(s => {
+                                                                    const isSelected = currentShapes.includes(s.v);
+                                                                    return (
+                                                                        <button key={s.v} onClick={() => handleShapeToggle(s.v)} className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all border ${isSelected ? 'bg-emerald-500 text-white border-emerald-600 shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-emerald-300 hover:text-emerald-600'}`}>
+                                                                            {s.l}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+                                                
+                                                if (key === 'pathType') return (
+                                                    <div key={key} className="flex justify-between items-center py-2 border-t border-gray-50 mt-1 pt-3">
+                                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{paramLabels[key]}</span>
+                                                        <select value={value || 'sine'} onChange={(e) => handleParamChange(key, e.target.value)} className="text-[11px] font-bold border border-gray-200 rounded-lg px-2 py-1.5 outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500 transition-all">
+                                                            <option value="sine">사인 곡선 (물결)</option>
+                                                            <option value="spiral">나선형 (소용돌이)</option>
+                                                            <option value="line">직선 (사선)</option>
+                                                        </select>
+                                                    </div>
+                                                );
+
+                                                if (key === 'gridWeights') return (
+                                                    <div key={key} className="py-2 border-t border-gray-50">
+                                                        <span className="text-[10px] font-bold text-gray-400 block mb-2 uppercase tracking-wider">{paramLabels[key]}</span>
+                                                        <div className="grid grid-cols-3 gap-2">
+                                                            {value.map((w, i) => <input key={i} type="number" value={w} onChange={(e) => { const nw = [...value]; nw[i] = parseInt(e.target.value) || 0; handleParamChange(key, nw); }} className="w-full bg-gray-50 border border-gray-200 text-xs text-center font-mono py-2 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" />)}
+                                                        </div>
+                                                    </div>
+                                                );
+                                                
+                                                if (key === 'flowScale') return (
+                                                    <div key={key} className="py-2 border-t border-gray-50 mt-1 pt-4">
+                                                        <div className="flex justify-between items-center mb-3">
+                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{paramLabels[key]}</span>
+                                                            <select value={value.dir} onChange={(e) => handleParamChange(key, { ...value, dir: e.target.value })} className="text-[11px] font-bold border border-gray-200 rounded-lg px-2 py-1.5 outline-none bg-gray-50 focus:ring-2 focus:ring-blue-500 transition-all">
+                                                                {[{v: 'NONE', l: '없음'}, {v: 'TL_BR', l: '좌상 ➔ 우하'}, {v: 'TR_BL', l: '우상 ➔ 좌하'}, {v: 'T_B', l: '위 ➔ 아래'}, {v: 'B_T', l: '아래 ➔ 위'}, {v: 'L_R', l: '좌 ➔ 우'}, {v: 'R_L', l: '우 ➔ 좌'}, {v: 'C_OUT', l: '중앙 ➔ 바깥'}].map(d => <option key={d.v} value={d.v}>{d.l}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <div className="flex gap-5">
+                                                            {['시작 크기', '종료 크기'].map((l, idx) => (
+                                                                <div key={l} className="flex-1"><span className="text-[10px] font-bold text-gray-400 block mb-2">{l}: <span className="text-blue-500">{value.range[idx].toFixed(1)}</span></span>
+                                                                    <input type="range" min="0" max="4" step="0.1" value={value.range[idx]} onChange={(e) => { const nr = [...value.range]; nr[idx] = parseFloat(e.target.value); handleParamChange(key, { ...value, range: nr }); }} className="w-full h-1.5 accent-blue-500" />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                );
+                                                
+                                                if (typeof value === 'number') {
+                                                    const config = getParamConfig(key);
+                                                    const isGenerativeParam = ['minDistance', 'noiseScale', 'noiseThreshold', 'spread', 'phySpread', 'rings', 'symmetry', 'clusterCount', 'cols', 'rows', 'posJitter', 'sizeJitter'].includes(key);
+                                                    return (
+                                                        <div key={key} className={`py-1.5 border-t border-gray-50 mt-1 pt-3 ${isGenerativeParam ? 'bg-indigo-50/20 -mx-4 px-4 rounded-xl' : ''}`}>
+                                                            <div className={`flex justify-between text-[11px] font-bold mb-2 uppercase tracking-wide ${isGenerativeParam ? 'text-indigo-600' : 'text-gray-700'}`}>
+                                                                <span>{paramLabels[key] || key}</span>
+                                                                <span className={`${isGenerativeParam ? 'text-indigo-700 bg-indigo-100' : 'text-blue-600 bg-blue-50'} px-2 py-0.5 rounded-lg`}>{value.toFixed(config.step < 1 ? 2 : 0)}</span>
+                                                            </div>
+                                                            <input type="range" min={config.min} max={config.max} step={config.step} value={value} onChange={(e) => handleParamChange(key, parseFloat(e.target.value))} className={`w-full h-1.5 ${isGenerativeParam ? 'accent-indigo-500' : 'accent-blue-500'}`} />
+                                                        </div>
+                                                    );
+                                                }
+                                                if (typeof value === 'boolean') return (
+                                                    <div key={key} className="flex justify-between items-center py-2 border-t border-gray-50 mt-1 pt-3">
+                                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{paramLabels[key] || key}</span>
+                                                        <input type="checkbox" checked={value} onChange={(e) => handleParamChange(key, e.target.checked)} className="accent-blue-500 w-4 h-4" />
+                                                    </div>
+                                                );
+                                                return null;
+                                            })}
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -729,20 +890,31 @@
                                     const isActive = selectedPatternBase.name === pat.name;
                                     const isCopied = copyStatus === pat.name;
                                     return (
-                                        <div key={idx} onClick={() => { setSelectedPatternBase(pat); setPatternParams(pat.params); }} className={`group p-5 rounded-[28px] border cursor-pointer transition-all duration-300 flex flex-col relative ${isActive ? 'border-blue-500 bg-blue-50/30 ring-4 ring-blue-50 shadow-md' : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'}`}>
+                                        <div key={idx} onClick={() => setSelectedPatternBase(pat)} className={`group p-5 rounded-[28px] border cursor-pointer transition-all duration-300 flex flex-col relative ${isActive ? 'border-blue-500 bg-blue-50/30 ring-4 ring-blue-50 shadow-md' : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'}`}>
                                             <div className="flex justify-between items-center mb-4">
                                                 <span className="font-black uppercase tracking-tighter text-sm flex items-center gap-2">
                                                     <Icon name="Wand2" size={16} color={isActive ? '#3b82f6' : '#94a3b8'} />
                                                     {pat.name} {pat.isCustomized && <span className="text-[9px] text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full ml-1 font-black tracking-widest">MOD</span>}
                                                 </span>
-                                                <button onClick={(e) => { e.stopPropagation(); copyToClipboard(pat.params, pat.name); }} className={`p-2 rounded-xl transition-all ${isCopied ? 'bg-emerald-500 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-blue-600 shadow-sm'}`}>
+                                                <button onClick={(e) => { e.stopPropagation(); copyToClipboard(pat.layers, pat.name); }} className={`p-2 rounded-xl transition-all ${isCopied ? 'bg-emerald-500 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-blue-600 shadow-sm'}`}>
                                                     <Icon name={isCopied ? 'Check' : 'Copy'} size={14} />
                                                 </button>
                                             </div>
+                                            
+                                            {/* Preview Code Snippet */}
                                             <div className={`text-[10px] font-mono p-4 rounded-2xl overflow-x-auto custom-scrollbar leading-relaxed border ${isActive ? 'bg-white text-blue-900 border-blue-100 shadow-inner' : 'bg-gray-50 text-gray-500 border-transparent'}`}>
-                                                <div className="opacity-40 font-bold mb-1">params: {'{'}</div>
-                                                {Object.entries(pat.params).map(([k,v]) => <div key={k} className="pl-4 whitespace-nowrap"><span className={isActive ? 'text-blue-600' : 'text-gray-700 font-bold'}>'{k}'</span>: {formatValueForCopy(v)},</div>)}
-                                                <div className="opacity-40 font-bold mt-1">{'}'}</div>
+                                                <div className="opacity-40 font-bold mb-1">layers: [</div>
+                                                {pat.layers.map((layer, lIdx) => (
+                                                    <div key={lIdx} className="mb-2 last:mb-0">
+                                                        <div className="pl-2 opacity-50">{'{'}</div>
+                                                        {Object.entries(layer).slice(0, 3).map(([k,v]) => (
+                                                            <div key={k} className="pl-6 whitespace-nowrap"><span className={isActive ? 'text-blue-600' : 'text-gray-700 font-bold'}>'{k}'</span>: {formatValueForCopy(v)},</div>
+                                                        ))}
+                                                        {Object.keys(layer).length > 3 && <div className="pl-6 opacity-50">...</div>}
+                                                        <div className="pl-2 opacity-50">{'}'}{lIdx < pat.layers.length - 1 ? ',' : ''}</div>
+                                                    </div>
+                                                ))}
+                                                <div className="opacity-40 font-bold mt-1">]</div>
                                             </div>
                                         </div>
                                     );
